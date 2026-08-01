@@ -1,4 +1,5 @@
 from functools import lru_cache
+from typing import Literal
 
 from pydantic import SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -6,7 +7,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 class Settings(BaseSettings):
     app_name: str = "Appointment Pack Document Processing"
-    environment: str = "development"
+    environment: Literal["development", "test", "production"] = "development"
     internal_api_key: SecretStr
     maximum_file_size_bytes: int = 10 * 1024 * 1024
 
