@@ -12,6 +12,7 @@ from fastapi import (
     UploadFile,
     status,
 )
+from starlette.concurrency import run_in_threadpool
 
 from appointment_pack_processing import __version__
 from appointment_pack_processing.config import Settings, get_settings
@@ -21,10 +22,18 @@ from appointment_pack_processing.document_processor import (
     EmptyDocumentError,
     UnsupportedContentTypeError,
 )
+from appointment_pack_processing.ocr_service import (
+    OcrError,
+    OcrService,
+)
 from appointment_pack_processing.schemas import (
     DocumentProcessingResponse,
     DocumentType,
     HealthResponse,
+)
+from appointment_pack_processing.text_extraction_service import (
+    TextExtractionError,
+    TextExtractionService,
 )
 
 SettingsDependency = Annotated[
@@ -55,10 +64,29 @@ def require_internal_api_key(
 def create_app() -> FastAPI:
     settings = get_settings()
 
+    ocr_service = OcrService(
+        language=settings.ocr_language,
+        pdf_dpi=settings.ocr_dpi,
+        tesseract_command=settings.tesseract_command,
+    )
+
+    text_extraction_service = TextExtractionService(
+        maximum_pdf_pages=settings.maximum_pdf_pages,
+        ocr_service=ocr_service,
+    )
+
+    document_processor = DocumentProcessor(
+        maximum_file_size_bytes=settings.maximum_file_size_bytes,
+        text_extraction_service=text_extraction_service,
+    )
+
     application = FastAPI(
         title=settings.app_name,
         version=__version__,
-        description=("Internal OCR and summarisation service for The Appointment Pack"),
+        description=(
+            "Internal OCR and summarisation service "
+            "for The Appointment Pack"
+        ),
     )
 
     @application.get(
@@ -94,20 +122,21 @@ def create_app() -> FastAPI:
             File(),
         ],
     ) -> DocumentProcessingResponse:
-        content_type = (file.content_type or "application/octet-stream")
-
-        processor = DocumentProcessor(settings.maximum_file_size_bytes)
+        content_type = (
+            file.content_type or "application/octet-stream"
+        )
 
         try:
             content = await file.read(
                 settings.maximum_file_size_bytes + 1
             )
 
-            return processor.process(
-                document_id=document_id,
-                document_type=document_type,
-                content_type=content_type,
-                content=content,
+            return await run_in_threadpool(
+                document_processor.process,
+                document_id,
+                document_type,
+                content_type,
+                content,
             )
         except EmptyDocumentError as exception:
             raise HTTPException(
@@ -122,6 +151,11 @@ def create_app() -> FastAPI:
         except UnsupportedContentTypeError as exception:
             raise HTTPException(
                 status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
+                detail=str(exception),
+            ) from exception
+        except (TextExtractionError, OcrError) as exception:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
                 detail=str(exception),
             ) from exception
         finally:
