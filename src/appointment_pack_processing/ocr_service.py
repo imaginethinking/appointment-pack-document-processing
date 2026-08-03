@@ -5,6 +5,10 @@ import pytesseract
 from PIL import Image, ImageOps, UnidentifiedImageError
 from pytesseract import TesseractError, TesseractNotFoundError
 
+from appointment_pack_processing.image_preprocessing_service import (
+    ImagePreprocessingService,
+)
+
 
 class OcrError(ValueError):
     """Base exception for expected OCR failures."""
@@ -27,24 +31,43 @@ class OcrTextNotFoundError(OcrError):
 
 
 class OcrService:
-
     def __init__(
         self,
         language: str,
         pdf_dpi: int,
+        image_preprocessing_service: ImagePreprocessingService,
         tesseract_command: str | None = None,
     ) -> None:
         self.language = language
         self.pdf_dpi = pdf_dpi
+        self.image_preprocessing_service = (
+            image_preprocessing_service
+        )
 
         if tesseract_command:
-            pytesseract.pytesseract.tesseract_cmd = tesseract_command
+            pytesseract.pytesseract.tesseract_cmd = (
+                tesseract_command
+            )
 
-    def extract_image_text(self, content: bytes) -> str:
+    def extract_image_text(
+        self,
+        content: bytes,
+    ) -> str:
         try:
             with Image.open(BytesIO(content)) as image:
-                prepared_image = ImageOps.exif_transpose(image).convert("RGB")
-                extracted_text = self._run_ocr(prepared_image)
+                oriented_image = ImageOps.exif_transpose(
+                    image
+                )
+
+                prepared_image = (
+                    self.image_preprocessing_service.preprocess(
+                        oriented_image
+                    )
+                )
+
+                extracted_text = self._run_ocr(
+                    prepared_image
+                )
         except UnidentifiedImageError as exception:
             raise UnreadableImageError(
                 "The uploaded image could not be read"
@@ -72,13 +95,27 @@ class OcrService:
 
         image = Image.frombytes(
             "RGB",
-            (pixmap.width, pixmap.height),
+            (
+                pixmap.width,
+                pixmap.height,
+            ),
             pixmap.samples,
         )
 
-        return self._run_ocr(image)
+        prepared_image = (
+            self.image_preprocessing_service.preprocess(
+                image
+            )
+        )
 
-    def _run_ocr(self, image: Image.Image) -> str:
+        return self._run_ocr(
+            prepared_image
+        )
+
+    def _run_ocr(
+        self,
+        image: Image.Image,
+    ) -> str:
         try:
             extracted_text = pytesseract.image_to_string(
                 image,
@@ -93,15 +130,26 @@ class OcrService:
                 "Tesseract failed to process the document"
             ) from exception
 
-        return self._normalise_text(extracted_text)
+        return self._normalise_text(
+            extracted_text
+        )
 
-    def _normalise_text(self, text: str) -> str:
+    def _normalise_text(
+        self,
+        text: str,
+    ) -> str:
         normalised_lines = []
 
         for line in text.splitlines():
-            normalised_line = " ".join(line.split())
+            normalised_line = " ".join(
+                line.split()
+            )
 
             if normalised_line:
-                normalised_lines.append(normalised_line)
+                normalised_lines.append(
+                    normalised_line
+                )
 
-        return "\n".join(normalised_lines)
+        return "\n".join(
+            normalised_lines
+        )

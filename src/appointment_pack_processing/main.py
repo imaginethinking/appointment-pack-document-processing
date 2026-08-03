@@ -22,6 +22,9 @@ from appointment_pack_processing.document_processor import (
     EmptyDocumentError,
     UnsupportedContentTypeError,
 )
+from appointment_pack_processing.image_preprocessing_service import (
+    ImagePreprocessingService,
+)
 from appointment_pack_processing.ocr_service import (
     OcrError,
     OcrService,
@@ -49,7 +52,9 @@ def require_internal_api_key(
         Header(alias="X-Internal-Api-Key"),
     ] = None,
 ) -> None:
-    expected_api_key = settings.internal_api_key.get_secret_value()
+    expected_api_key = (
+        settings.internal_api_key.get_secret_value()
+    )
 
     if provided_api_key is None or not compare_digest(
         provided_api_key,
@@ -64,9 +69,19 @@ def require_internal_api_key(
 def create_app() -> FastAPI:
     settings = get_settings()
 
+    image_preprocessing_service = ImagePreprocessingService(
+        enabled=settings.ocr_preprocessing_enabled,
+        minimum_image_width=(
+            settings.ocr_minimum_image_width
+        ),
+    )
+
     ocr_service = OcrService(
         language=settings.ocr_language,
         pdf_dpi=settings.ocr_dpi,
+        image_preprocessing_service=(
+            image_preprocessing_service
+        ),
         tesseract_command=settings.tesseract_command,
     )
 
@@ -76,7 +91,9 @@ def create_app() -> FastAPI:
     )
 
     document_processor = DocumentProcessor(
-        maximum_file_size_bytes=settings.maximum_file_size_bytes,
+        maximum_file_size_bytes=(
+            settings.maximum_file_size_bytes
+        ),
         text_extraction_service=text_extraction_service,
     )
 
@@ -123,7 +140,8 @@ def create_app() -> FastAPI:
         ],
     ) -> DocumentProcessingResponse:
         content_type = (
-            file.content_type or "application/octet-stream"
+            file.content_type
+            or "application/octet-stream"
         )
 
         try:

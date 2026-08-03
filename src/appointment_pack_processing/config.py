@@ -27,6 +27,12 @@ class Settings(BaseSettings):
         ge=150,
         le=600,
     )
+    ocr_preprocessing_enabled: bool = True
+    ocr_minimum_image_width: int = Field(
+        default=1600,
+        ge=800,
+        le=4000,
+    )
     tesseract_command: str | None = None
 
     model_config = SettingsConfigDict(
