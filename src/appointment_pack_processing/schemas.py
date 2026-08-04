@@ -33,6 +33,9 @@ class DocumentProcessingResponse(ApiModel):
     document_id: UUID = Field(alias="documentId")
     extracted_text: str = Field(alias="extractedText")
     summary: str
-    warnings: list[str] = Field(default_factory=list)
+    processing_warning: str | None = Field(
+        default=None,
+        alias="processingWarning",
+    )
     processor_version: str = Field(alias="processorVersion")
     model: ModelMetadataResponse | None = None

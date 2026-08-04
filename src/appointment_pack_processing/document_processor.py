@@ -60,12 +60,10 @@ class DocumentProcessor:
             document_id=document_id,
             extracted_text=extracted_text,
             summary="",
-            warnings=[
-                (
-                    f"Text was extracted from the {document_type.value} "
-                    "document, but summarisation is not yet implemented."
-                )
-            ],
+            processing_warning=(
+                f"Text was extracted from the {document_type.value} "
+                "document, but summarisation is not yet implemented."
+            ),
             processor_version=__version__,
             model=None,
         )
