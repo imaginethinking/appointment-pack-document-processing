@@ -16,8 +16,8 @@ from starlette.concurrency import run_in_threadpool
 
 from appointment_pack_processing import __version__
 from appointment_pack_processing.config import Settings, get_settings
-from appointment_pack_processing.document_processor import (
-    DocumentProcessor,
+from appointment_pack_processing.document_processing_service import (
+    DocumentProcessingService,
     DocumentTooLargeError,
     EmptyDocumentError,
     UnsupportedContentTypeError,
@@ -30,7 +30,7 @@ from appointment_pack_processing.ocr_service import (
     OcrService,
 )
 from appointment_pack_processing.schemas import (
-    DocumentProcessingResponse,
+    DocumentExtractionResponse,
     DocumentType,
     HealthResponse,
 )
@@ -90,7 +90,7 @@ def create_app() -> FastAPI:
         ocr_service=ocr_service,
     )
 
-    document_processor = DocumentProcessor(
+    document_processing_service = DocumentProcessingService(
         maximum_file_size_bytes=(
             settings.maximum_file_size_bytes
         ),
@@ -101,8 +101,8 @@ def create_app() -> FastAPI:
         title=settings.app_name,
         version=__version__,
         description=(
-            "Internal OCR and summarisation service "
-            "for The Appointment Pack"
+            "Internal document extraction and summarisation "
+            "service for The Appointment Pack"
         ),
     )
 
@@ -120,12 +120,12 @@ def create_app() -> FastAPI:
         )
 
     @application.post(
-        "/internal/v1/documents/process",
-        response_model=DocumentProcessingResponse,
+        "/internal/v1/documents/extract",
+        response_model=DocumentExtractionResponse,
         tags=["documents"],
         dependencies=[Depends(require_internal_api_key)],
     )
-    async def process_document(
+    async def extract_document(
         document_id: Annotated[
             UUID,
             Form(alias="documentId"),
@@ -138,7 +138,7 @@ def create_app() -> FastAPI:
             UploadFile,
             File(),
         ],
-    ) -> DocumentProcessingResponse:
+    ) -> DocumentExtractionResponse:
         content_type = (
             file.content_type
             or "application/octet-stream"
@@ -150,7 +150,7 @@ def create_app() -> FastAPI:
             )
 
             return await run_in_threadpool(
-                document_processor.process,
+                document_processing_service.extract,
                 document_id,
                 document_type,
                 content_type,

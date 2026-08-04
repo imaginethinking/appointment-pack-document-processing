@@ -2,7 +2,7 @@ from uuid import UUID
 
 from appointment_pack_processing import __version__
 from appointment_pack_processing.schemas import (
-    DocumentProcessingResponse,
+    DocumentExtractionResponse,
     DocumentType,
 )
 from appointment_pack_processing.text_extraction_service import (
@@ -22,7 +22,7 @@ class UnsupportedContentTypeError(ValueError):
     """Raised when an uploaded document has an unsupported media type."""
 
 
-class DocumentProcessor:
+class DocumentProcessingService:
     SUPPORTED_CONTENT_TYPES = frozenset(
         {
             "application/pdf",
@@ -39,14 +39,14 @@ class DocumentProcessor:
         self.maximum_file_size_bytes = maximum_file_size_bytes
         self.text_extraction_service = text_extraction_service
 
-    def process(
+    def extract(
         self,
         document_id: UUID,
         document_type: DocumentType,
         content_type: str,
         content: bytes,
-    ) -> DocumentProcessingResponse:
-        self._validate(
+    ) -> DocumentExtractionResponse:
+        self._validate_document(
             content_type=content_type,
             content=content,
         )
@@ -56,19 +56,20 @@ class DocumentProcessor:
             content=content,
         )
 
-        return DocumentProcessingResponse(
+        return DocumentExtractionResponse(
             document_id=document_id,
             extracted_text=extracted_text,
-            summary="",
+            deidentified_text=None,
+            generated_summary=None,
             processing_warning=(
                 f"Text was extracted from the {document_type.value} "
-                "document, but summarisation is not yet implemented."
+                "document, but document-specific processing is not yet "
+                "implemented."
             ),
             processor_version=__version__,
-            model=None,
         )
 
-    def _validate(
+    def _validate_document(
         self,
         content_type: str,
         content: bytes,

@@ -29,13 +29,19 @@ class ModelMetadataResponse(ApiModel):
     revision: str
 
 
-class DocumentProcessingResponse(ApiModel):
+class DocumentExtractionResponse(ApiModel):
     document_id: UUID = Field(alias="documentId")
     extracted_text: str = Field(alias="extractedText")
-    summary: str
+    deidentified_text: str | None = Field(
+        default=None,
+        alias="deidentifiedText",
+    )
+    generated_summary: str | None = Field(
+        default=None,
+        alias="generatedSummary",
+    )
     processing_warning: str | None = Field(
         default=None,
         alias="processingWarning",
     )
     processor_version: str = Field(alias="processorVersion")
-    model: ModelMetadataResponse | None = None
