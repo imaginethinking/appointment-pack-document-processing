@@ -1,9 +1,16 @@
 from uuid import UUID
 
 from appointment_pack_processing import __version__
+from appointment_pack_processing.appointment_summary_service import (
+    AppointmentSummaryService,
+)
+from appointment_pack_processing.deidentification_service import (
+    DeidentificationService,
+)
 from appointment_pack_processing.schemas import (
     DocumentExtractionResponse,
     DocumentType,
+    RedactionContext,
 )
 from appointment_pack_processing.text_extraction_service import (
     TextExtractionService,
@@ -35,9 +42,13 @@ class DocumentProcessingService:
         self,
         maximum_file_size_bytes: int,
         text_extraction_service: TextExtractionService,
+        deidentification_service: DeidentificationService,
+        appointment_summary_service: AppointmentSummaryService,
     ) -> None:
         self.maximum_file_size_bytes = maximum_file_size_bytes
         self.text_extraction_service = text_extraction_service
+        self.deidentification_service = deidentification_service
+        self.appointment_summary_service = appointment_summary_service
 
     def extract(
         self,
@@ -45,6 +56,7 @@ class DocumentProcessingService:
         document_type: DocumentType,
         content_type: str,
         content: bytes,
+        redaction_context: RedactionContext
     ) -> DocumentExtractionResponse:
         self._validate_document(
             content_type=content_type,
@@ -56,18 +68,73 @@ class DocumentProcessingService:
             content=content,
         )
 
+        if document_type== DocumentType.CONSULTATION_OUTCOME_LETTER:
+            deidentification_result = (
+                self.deidentification_service.deidentify(
+                    text=extracted_text,
+                    context=redaction_context,
+                )
+            )
+
+            return self._process_consultation_outcome_letter(
+                document_id=document_id,
+                extracted_text=extracted_text,
+                redaction_context=redaction_context,
+            )
+
+        return self._process_appointment_letter(
+            document_id=document_id,
+            extracted_text=extracted_text,
+        )
+
+    def _process_appointment_letter(
+        self,
+        document_id: UUID,
+        extracted_text: str,
+    ) -> DocumentExtractionResponse:
+        summary_result = (
+            self.appointment_summary_service.generate(
+                extracted_text
+            )
+        )
+
         return DocumentExtractionResponse(
             document_id=document_id,
             extracted_text=extracted_text,
             deidentified_text=None,
-            generated_summary=None,
+            generated_summary=summary_result.summary,
             processing_warning=(
-                f"Text was extracted from the {document_type.value} "
-                "document, but document-specific processing is not yet "
-                "implemented."
+                summary_result.processing_warning
             ),
             processor_version=__version__,
         )
+
+    def _process_consultation_outcome_letter(
+        self,
+        document_id: UUID,
+        extracted_text: str,
+        redaction_context: RedactionContext,
+    ) -> DocumentExtractionResponse:
+        deidentification_result = (
+            self.deidentification_service.deidentify(
+                text=extracted_text,
+                context=redaction_context,
+            )
+        )
+
+        return DocumentExtractionResponse(
+            document_id=document_id,
+            extracted_text=extracted_text,
+            deidentified_text=(
+                deidentification_result.text
+            ),
+            generated_summary=None,
+            processing_warning=(
+                deidentification_result.processing_warning
+            ),
+            processor_version=__version__,
+        )
+
 
     def _validate_document(
         self,

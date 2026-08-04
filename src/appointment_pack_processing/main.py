@@ -12,10 +12,17 @@ from fastapi import (
     UploadFile,
     status,
 )
+from pydantic import ValidationError
 from starlette.concurrency import run_in_threadpool
 
 from appointment_pack_processing import __version__
+from appointment_pack_processing.appointment_summary_service import (
+    AppointmentSummaryService,
+)
 from appointment_pack_processing.config import Settings, get_settings
+from appointment_pack_processing.deidentification_service import (
+    DeidentificationService,
+)
 from appointment_pack_processing.document_processing_service import (
     DocumentProcessingService,
     DocumentTooLargeError,
@@ -33,6 +40,7 @@ from appointment_pack_processing.schemas import (
     DocumentExtractionResponse,
     DocumentType,
     HealthResponse,
+    RedactionContext,
 )
 from appointment_pack_processing.text_extraction_service import (
     TextExtractionError,
@@ -90,19 +98,22 @@ def create_app() -> FastAPI:
         ocr_service=ocr_service,
     )
 
+    deidentification_service = DeidentificationService()
+    appointment_summary_service = AppointmentSummaryService()
+
     document_processing_service = DocumentProcessingService(
-        maximum_file_size_bytes=(
-            settings.maximum_file_size_bytes
-        ),
+        maximum_file_size_bytes=(settings.maximum_file_size_bytes),
         text_extraction_service=text_extraction_service,
+        deidentification_service=deidentification_service,
+        appointment_summary_service=(appointment_summary_service),
     )
 
     application = FastAPI(
         title=settings.app_name,
         version=__version__,
         description=(
-            "Internal document extraction and summarisation "
-            "service for The Appointment Pack"
+            "Internal document extraction, de-identification "
+            "and summarisation service for The Appointment Pack"
         ),
     )
 
@@ -134,6 +145,10 @@ def create_app() -> FastAPI:
             DocumentType,
             Form(alias="documentType"),
         ],
+        redaction_context_json: Annotated[
+            str,
+            Form(alias="redactionContext"),
+        ],
         file: Annotated[
             UploadFile,
             File(),
@@ -145,6 +160,18 @@ def create_app() -> FastAPI:
         )
 
         try:
+            try:
+                redaction_context = (
+                    RedactionContext.model_validate_json(
+                        redaction_context_json
+                    )
+                )
+            except ValidationError as exception:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Redaction context is invalid",
+                ) from exception
+
             content = await file.read(
                 settings.maximum_file_size_bytes + 1
             )
@@ -155,6 +182,7 @@ def create_app() -> FastAPI:
                 document_type,
                 content_type,
                 content,
+                redaction_context,
             )
         except EmptyDocumentError as exception:
             raise HTTPException(

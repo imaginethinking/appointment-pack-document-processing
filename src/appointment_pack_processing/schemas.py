@@ -28,6 +28,13 @@ class ModelMetadataResponse(ApiModel):
     name: str
     revision: str
 
+class RedactionContext(ApiModel):
+    known_values: list[str] = Field(
+        default_factory=list,
+        alias="knownValues",
+        max_length=100,
+    )
+
 
 class DocumentExtractionResponse(ApiModel):
     document_id: UUID = Field(alias="documentId")
