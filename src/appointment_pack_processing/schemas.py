@@ -17,29 +17,11 @@ class DocumentType(StrEnum):
     CONSULTATION_OUTCOME_LETTER = "CONSULTATION_OUTCOME_LETTER"
 
 
-class KeyPointType(StrEnum):
-    APPOINTMENT = "APPOINTMENT"
-    OUTCOME = "OUTCOME"
-    FOLLOW_UP = "FOLLOW_UP"
-    MEDICATION = "MEDICATION"
-    OTHER = "OTHER"
-
-
 class HealthResponse(ApiModel):
     status: Literal["UP"]
     service: str
     version: str
     environment: str
-
-
-class KeyPointResponse(ApiModel):
-    type: KeyPointType
-    text: str = Field(min_length=1)
-    source_page: int | None = Field(
-        default=None,
-        alias="sourcePage",
-        ge=1,
-    )
 
 
 class ModelMetadataResponse(ApiModel):
@@ -51,10 +33,6 @@ class DocumentProcessingResponse(ApiModel):
     document_id: UUID = Field(alias="documentId")
     extracted_text: str = Field(alias="extractedText")
     summary: str
-    key_points: list[KeyPointResponse] = Field(
-        default_factory=list,
-        alias="keyPoints",
-    )
     warnings: list[str] = Field(default_factory=list)
     processor_version: str = Field(alias="processorVersion")
     model: ModelMetadataResponse | None = None

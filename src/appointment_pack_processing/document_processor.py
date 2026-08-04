@@ -60,7 +60,6 @@ class DocumentProcessor:
             document_id=document_id,
             extracted_text=extracted_text,
             summary="",
-            key_points=[],
             warnings=[
                 (
                     f"Text was extracted from the {document_type.value} "
