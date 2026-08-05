@@ -52,3 +52,30 @@ class DocumentExtractionResponse(ApiModel):
         alias="processingWarning",
     )
     processor_version: str = Field(alias="processorVersion")
+
+class DocumentSummaryRequest(ApiModel):
+    document_id: UUID = Field(alias="documentId")
+
+    approved_deidentified_text: str = Field(
+        alias="approvedDeidentifiedText",
+        min_length=1,
+    )
+
+
+class DocumentSummaryResponse(ApiModel):
+    document_id: UUID = Field(alias="documentId")
+    summary: str = Field(min_length=1)
+
+    processor_version: str = Field(
+        alias="processorVersion"
+    )
+
+    model_name: str = Field(
+        alias="modelName",
+        min_length=1,
+    )
+
+    prompt_version: str = Field(
+        alias="promptVersion",
+        min_length=1,
+    )
