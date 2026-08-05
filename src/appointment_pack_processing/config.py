@@ -35,6 +35,36 @@ class Settings(BaseSettings):
     )
     tesseract_command: str | None = None
 
+    openai_api_key: SecretStr | None = None
+
+    openai_model: str = Field(
+        default="gpt-5-nano",
+        min_length=1,
+    )
+
+    openai_timeout_seconds: float = Field(
+        default=60.0,
+        gt=0,
+        le=300,
+    )
+
+    openai_max_output_tokens: int = Field(
+        default=1200,
+        ge=100,
+        le=10_000,
+    )
+
+    openai_prompt_version: str = Field(
+        default="consultation-summary-v1",
+        min_length=1,
+        max_length=100,
+    )
+
+    maximum_ai_input_characters: int = Field(
+        default=100_000,
+        gt=0,
+    )
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_prefix="APP_",
