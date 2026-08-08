@@ -85,11 +85,6 @@ class DocumentProcessingService:
         )
 
         if document_type == DocumentType.CONSULTATION_OUTCOME_LETTER:
-            deidentification_result = self.deidentification_service.deidentify(
-                text=extracted_text,
-                context=redaction_context,
-            )
-
             return self._process_consultation_outcome_letter(
                 document_id=document_id,
                 extracted_text=extracted_text,
@@ -108,7 +103,9 @@ class DocumentProcessingService:
     ) -> DocumentSummaryResponse:
         self._validate_approved_text(approved_deidentified_text)
 
-        summary_result = self.openai_summary_service.summarise(approved_deidentified_text)
+        summary_result = self.openai_summary_service.summarise(
+            approved_deidentified_text
+        )
 
         return DocumentSummaryResponse(
             document_id=document_id,
@@ -123,7 +120,9 @@ class DocumentProcessingService:
         document_id: UUID,
         extracted_text: str,
     ) -> DocumentExtractionResponse:
-        summary_result = self.appointment_summary_service.generate(extracted_text)
+        summary_result = self.appointment_summary_service.generate(
+            extracted_text
+        )
 
         return DocumentExtractionResponse(
             document_id=document_id,
@@ -163,17 +162,23 @@ class DocumentProcessingService:
             raise EmptyDocumentError("Document file must not be empty")
 
         if len(content) > self.maximum_file_size_bytes:
-            raise DocumentTooLargeError("Document file exceeds the maximum size")
+            raise DocumentTooLargeError(
+                "Document file exceeds the maximum size"
+            )
 
         if content_type not in self.SUPPORTED_CONTENT_TYPES:
-            raise UnsupportedContentTypeError("Only PDF, JPEG and PNG documents are supported")
+            raise UnsupportedContentTypeError(
+                "Only PDF, JPEG and PNG documents are supported"
+            )
 
     def _validate_approved_text(
         self,
         approved_deidentified_text: str,
     ) -> None:
         if not approved_deidentified_text.strip():
-            raise ApprovedTextBlankError("Approved de-identified text must not be blank")
+            raise ApprovedTextBlankError(
+                "Approved de-identified text must not be blank"
+            )
 
         if len(approved_deidentified_text) > self.maximum_ai_input_characters:
             raise AiInputTooLongError(
