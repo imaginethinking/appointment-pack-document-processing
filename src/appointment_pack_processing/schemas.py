@@ -1,3 +1,5 @@
+from datetime import date as Date
+from datetime import time as Time
 from enum import StrEnum
 from typing import Literal
 from uuid import UUID
@@ -28,6 +30,7 @@ class ModelMetadataResponse(ApiModel):
     name: str
     revision: str
 
+
 class RedactionContext(ApiModel):
     known_values: list[str] = Field(
         default_factory=list,
@@ -36,25 +39,95 @@ class RedactionContext(ApiModel):
     )
 
 
+class AppointmentAddressDetailsResponse(ApiModel):
+    address_line_1: str | None = Field(
+        default=None,
+        alias="addressLine1",
+    )
+
+    address_line_2: str | None = Field(
+        default=None,
+        alias="addressLine2",
+    )
+
+    town_city: str | None = Field(
+        default=None,
+        alias="townCity",
+    )
+
+    county: str | None = None
+
+    postcode: str | None = None
+
+    country: str | None = None
+
+
+class AppointmentDetailsResponse(ApiModel):
+    date: Date | None = None
+
+    start_time: Time | None = Field(
+        default=None,
+        alias="startTime",
+    )
+
+    end_time: Time | None = Field(
+        default=None,
+        alias="endTime",
+    )
+
+    service: str | None = None
+
+    appointment_type: str | None = Field(
+        default=None,
+        alias="appointmentType",
+    )
+
+    clinician_or_team: str | None = Field(
+        default=None,
+        alias="clinicianOrTeam",
+    )
+
+    location_name: str | None = Field(
+        default=None,
+        alias="locationName",
+    )
+
+    address: AppointmentAddressDetailsResponse | None = None
+
+
 class DocumentExtractionResponse(ApiModel):
-    document_id: UUID = Field(alias="documentId")
-    extracted_text: str = Field(alias="extractedText")
+    document_id: UUID = Field(
+        alias="documentId",
+    )
+
+    extracted_text: str = Field(
+        alias="extractedText",
+    )
+
     deidentified_text: str | None = Field(
         default=None,
         alias="deidentifiedText",
     )
-    generated_summary: str | None = Field(
+
+    appointment_details: AppointmentDetailsResponse | None = Field(
         default=None,
-        alias="generatedSummary",
+        alias="appointmentDetails",
     )
+
     processing_warning: str | None = Field(
         default=None,
         alias="processingWarning",
     )
-    processor_version: str = Field(alias="processorVersion")
+
+    processor_version: str = Field(
+        alias="processorVersion",
+    )
+
 
 class DocumentSummaryRequest(ApiModel):
-    document_id: UUID = Field(alias="documentId")
+    document_id: UUID = Field(
+        alias="documentId",
+    )
 
     approved_deidentified_text: str = Field(
         alias="approvedDeidentifiedText",
@@ -63,11 +136,16 @@ class DocumentSummaryRequest(ApiModel):
 
 
 class DocumentSummaryResponse(ApiModel):
-    document_id: UUID = Field(alias="documentId")
-    summary: str = Field(min_length=1)
+    document_id: UUID = Field(
+        alias="documentId",
+    )
+
+    summary: str = Field(
+        min_length=1,
+    )
 
     processor_version: str = Field(
-        alias="processorVersion"
+        alias="processorVersion",
     )
 
     model_name: str = Field(

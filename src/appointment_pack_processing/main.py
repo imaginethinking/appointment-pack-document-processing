@@ -16,8 +16,8 @@ from pydantic import ValidationError
 from starlette.concurrency import run_in_threadpool
 
 from appointment_pack_processing import __version__
-from appointment_pack_processing.appointment_summary_service import (
-    AppointmentSummaryService,
+from appointment_pack_processing.appointment_details_service import (
+    AppointmentDetailsService,
 )
 from appointment_pack_processing.config import (
     Settings,
@@ -107,7 +107,7 @@ def create_app() -> FastAPI:
 
     deidentification_service = DeidentificationService()
 
-    appointment_summary_service = AppointmentSummaryService()
+    appointment_details_service = AppointmentDetailsService()
 
     openai_api_key = (
         settings.openai_api_key.get_secret_value() if settings.openai_api_key is not None else None
@@ -126,7 +126,7 @@ def create_app() -> FastAPI:
         maximum_ai_input_characters=settings.maximum_ai_input_characters,
         text_extraction_service=text_extraction_service,
         deidentification_service=deidentification_service,
-        appointment_summary_service=appointment_summary_service,
+        appointment_details_service=appointment_details_service,
         openai_summary_service=openai_summary_service,
     )
 

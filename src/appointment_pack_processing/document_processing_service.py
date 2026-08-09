@@ -1,8 +1,8 @@
 from uuid import UUID
 
 from appointment_pack_processing import __version__
-from appointment_pack_processing.appointment_summary_service import (
-    AppointmentSummaryService,
+from appointment_pack_processing.appointment_details_service import (
+    AppointmentDetailsService,
 )
 from appointment_pack_processing.deidentification_service import (
     DeidentificationService,
@@ -11,6 +11,8 @@ from appointment_pack_processing.openai_summary_service import (
     OpenAiSummaryService,
 )
 from appointment_pack_processing.schemas import (
+    AppointmentAddressDetailsResponse,
+    AppointmentDetailsResponse,
     DocumentExtractionResponse,
     DocumentSummaryResponse,
     DocumentType,
@@ -56,14 +58,14 @@ class DocumentProcessingService:
         maximum_ai_input_characters: int,
         text_extraction_service: TextExtractionService,
         deidentification_service: DeidentificationService,
-        appointment_summary_service: AppointmentSummaryService,
+        appointment_details_service: AppointmentDetailsService,
         openai_summary_service: OpenAiSummaryService,
     ) -> None:
         self.maximum_file_size_bytes = maximum_file_size_bytes
         self.maximum_ai_input_characters = maximum_ai_input_characters
         self.text_extraction_service = text_extraction_service
         self.deidentification_service = deidentification_service
-        self.appointment_summary_service = appointment_summary_service
+        self.appointment_details_service = appointment_details_service
         self.openai_summary_service = openai_summary_service
 
     def extract(
@@ -103,9 +105,7 @@ class DocumentProcessingService:
     ) -> DocumentSummaryResponse:
         self._validate_approved_text(approved_deidentified_text)
 
-        summary_result = self.openai_summary_service.summarise(
-            approved_deidentified_text
-        )
+        summary_result = self.openai_summary_service.summarise(approved_deidentified_text)
 
         return DocumentSummaryResponse(
             document_id=document_id,
@@ -120,16 +120,37 @@ class DocumentProcessingService:
         document_id: UUID,
         extracted_text: str,
     ) -> DocumentExtractionResponse:
-        summary_result = self.appointment_summary_service.generate(
-            extracted_text
+        result = self.appointment_details_service.extract(extracted_text)
+
+        address = None
+
+        if result.details.address is not None:
+            address = AppointmentAddressDetailsResponse(
+                address_line_1=result.details.address.address_line_1,
+                address_line_2=result.details.address.address_line_2,
+                town_city=result.details.address.town_city,
+                county=result.details.address.county,
+                postcode=result.details.address.postcode,
+                country=result.details.address.country,
+            )
+
+        details = AppointmentDetailsResponse(
+            date=result.details.date,
+            start_time=result.details.start_time,
+            end_time=result.details.end_time,
+            service=result.details.service,
+            appointment_type=result.details.appointment_type,
+            clinician_or_team=result.details.clinician_or_team,
+            location_name=result.details.location_name,
+            address=address,
         )
 
         return DocumentExtractionResponse(
             document_id=document_id,
             extracted_text=extracted_text,
             deidentified_text=None,
-            generated_summary=summary_result.summary,
-            processing_warning=summary_result.processing_warning,
+            appointment_details=details,
+            processing_warning=result.processing_warning,
             processor_version=__version__,
         )
 
@@ -148,7 +169,7 @@ class DocumentProcessingService:
             document_id=document_id,
             extracted_text=extracted_text,
             deidentified_text=deidentification_result.text,
-            generated_summary=None,
+            appointment_details=None,
             processing_warning=deidentification_result.processing_warning,
             processor_version=__version__,
         )
@@ -162,23 +183,17 @@ class DocumentProcessingService:
             raise EmptyDocumentError("Document file must not be empty")
 
         if len(content) > self.maximum_file_size_bytes:
-            raise DocumentTooLargeError(
-                "Document file exceeds the maximum size"
-            )
+            raise DocumentTooLargeError("Document file exceeds the maximum size")
 
         if content_type not in self.SUPPORTED_CONTENT_TYPES:
-            raise UnsupportedContentTypeError(
-                "Only PDF, JPEG and PNG documents are supported"
-            )
+            raise UnsupportedContentTypeError("Only PDF, JPEG and PNG documents are supported")
 
     def _validate_approved_text(
         self,
         approved_deidentified_text: str,
     ) -> None:
         if not approved_deidentified_text.strip():
-            raise ApprovedTextBlankError(
-                "Approved de-identified text must not be blank"
-            )
+            raise ApprovedTextBlankError("Approved de-identified text must not be blank")
 
         if len(approved_deidentified_text) > self.maximum_ai_input_characters:
             raise AiInputTooLongError(
