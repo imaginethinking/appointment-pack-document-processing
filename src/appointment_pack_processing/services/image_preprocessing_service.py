@@ -1,9 +1,13 @@
+"""Lightweight image preprocessing used before OCR."""
+
 import cv2
 import numpy as np
 from PIL import Image
 
 
 class ImagePreprocessingService:
+    """Prepare images for OCR with optional resize and adaptive thresholding."""
+
     ADAPTIVE_THRESHOLD_BLOCK_SIZE = 31
     ADAPTIVE_THRESHOLD_CONSTANT = 15
 
@@ -12,6 +16,7 @@ class ImagePreprocessingService:
         enabled: bool,
         minimum_image_width: int,
     ) -> None:
+        """Configure whether preprocessing is enabled and the resize threshold."""
         self.enabled = enabled
         self.minimum_image_width = minimum_image_width
 
@@ -19,6 +24,7 @@ class ImagePreprocessingService:
         self,
         image: Image.Image,
     ) -> Image.Image:
+        """Return an RGB image or a thresholded image when preprocessing is enabled."""
         rgb_image = image.convert("RGB")
 
         if not self.enabled:
@@ -50,6 +56,7 @@ class ImagePreprocessingService:
         self,
         image: np.ndarray,
     ) -> np.ndarray:
+        """Enlarge images below the configured minimum width while keeping aspect ratio."""
         current_height, current_width = image.shape
 
         if current_width >= self.minimum_image_width:

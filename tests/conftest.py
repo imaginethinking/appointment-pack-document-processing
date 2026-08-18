@@ -7,7 +7,9 @@ from fastapi.testclient import TestClient
 from appointment_pack_processing.api.dependencies import get_document_processing_service
 from appointment_pack_processing.app import create_app
 from appointment_pack_processing.config import get_settings
-from appointment_pack_processing.document_processing_service import DocumentProcessingService
+from appointment_pack_processing.services.document_processing_service import (
+    DocumentProcessingService,
+)
 
 
 @pytest.fixture

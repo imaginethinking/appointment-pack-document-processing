@@ -1,3 +1,5 @@
+"""Deterministic extraction of structured appointment details."""
+
 import re
 from dataclasses import dataclass
 from datetime import date, datetime, time
@@ -5,6 +7,8 @@ from datetime import date, datetime, time
 
 @dataclass(frozen=True, slots=True)
 class AppointmentAddressDetails:
+    """Structured appointment address values extracted from a document."""
+
     address_line_1: str | None
     address_line_2: str | None
     town_city: str | None
@@ -15,6 +19,8 @@ class AppointmentAddressDetails:
 
 @dataclass(frozen=True, slots=True)
 class AppointmentDetails:
+    """Structured appointment values extracted from a document."""
+
     date: date | None
     start_time: time | None
     end_time: time | None
@@ -27,11 +33,15 @@ class AppointmentDetails:
 
 @dataclass(frozen=True, slots=True)
 class AppointmentDetailsResult:
+    """Appointment details together with any review warning."""
+
     details: AppointmentDetails
     processing_warning: str | None
 
 
 class AppointmentDetailsService:
+    """Extract conservative appointment suggestions from labelled document lines."""
+
     MAXIMUM_FIELD_LENGTH = 250
 
     DATE_PATTERNS = (
@@ -197,6 +207,7 @@ class AppointmentDetailsService:
         self,
         text: str,
     ) -> AppointmentDetailsResult:
+        """Extract supported appointment fields from labelled document lines."""
         lines = text.splitlines()
 
         address = self._extract_address(lines)
@@ -239,6 +250,7 @@ class AppointmentDetailsService:
         self,
         lines: list[str],
     ) -> date | None:
+        """Extract and normalise a supported labelled appointment date."""
         value = self._find_value(
             lines,
             self.DATE_PATTERNS,
@@ -259,6 +271,7 @@ class AppointmentDetailsService:
             "",
         )
 
+        # Unsupported or ambiguous date formats remain None rather than trying to guess.
         for date_format in self.DATE_FORMATS:
             try:
                 return datetime.strptime(
@@ -275,6 +288,7 @@ class AppointmentDetailsService:
         lines: list[str],
         patterns: tuple[re.Pattern[str], ...],
     ) -> time | None:
+        """Extract and normalise a supported labelled appointment time."""
         value = self._find_value(
             lines,
             patterns,
@@ -307,6 +321,7 @@ class AppointmentDetailsService:
         self,
         lines: list[str],
     ) -> AppointmentAddressDetails | None:
+        """Extract any supported labelled appointment address fields."""
         address = AppointmentAddressDetails(
             address_line_1=self._find_value(
                 lines,
@@ -360,6 +375,7 @@ class AppointmentDetailsService:
         patterns: tuple[re.Pattern[str], ...],
         maximum_length: int = MAXIMUM_FIELD_LENGTH,
     ) -> str | None:
+        """Return the first valid labelled value matching the supplied patterns."""
         for line in lines:
             for pattern in patterns:
                 match = pattern.match(line)
@@ -382,6 +398,7 @@ class AppointmentDetailsService:
         value: str,
         maximum_length: int,
     ) -> str | None:
+        """Normalise a labelled value and reject blank or oversized content."""
         normalised_value = " ".join(value.split()).strip(" |")
 
         if not normalised_value:
@@ -396,6 +413,7 @@ class AppointmentDetailsService:
         self,
         details: AppointmentDetails,
     ) -> str | None:
+        """Build a review warning when supported appointment values are missing."""
         address_present = details.address is not None
 
         identified_values = (
@@ -441,6 +459,7 @@ class AppointmentDetailsService:
         self,
         field_names: list[str],
     ) -> str:
+        """Format missing field names for a readable warning message."""
         if len(field_names) == 1:
             return field_names[0]
 

@@ -4,7 +4,9 @@ from typing import Annotated
 from fastapi import Depends, Header, HTTPException, Request, status
 
 from appointment_pack_processing.config import Settings, get_settings
-from appointment_pack_processing.document_processing_service import DocumentProcessingService
+from appointment_pack_processing.services.document_processing_service import (
+    DocumentProcessingService,
+)
 
 SettingsDependency = Annotated[
     Settings,

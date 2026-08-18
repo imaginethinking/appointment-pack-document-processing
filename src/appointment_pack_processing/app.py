@@ -3,14 +3,22 @@ from fastapi import FastAPI
 from appointment_pack_processing import __version__
 from appointment_pack_processing.api.routes.documents import router as documents_router
 from appointment_pack_processing.api.routes.health import router as health_router
-from appointment_pack_processing.appointment_details_service import AppointmentDetailsService
 from appointment_pack_processing.config import Settings, get_settings
-from appointment_pack_processing.deidentification_service import DeidentificationService
-from appointment_pack_processing.document_processing_service import DocumentProcessingService
-from appointment_pack_processing.image_preprocessing_service import ImagePreprocessingService
-from appointment_pack_processing.ocr_service import OcrService
-from appointment_pack_processing.openai_summary_service import OpenAiSummaryService
-from appointment_pack_processing.text_extraction_service import TextExtractionService
+from appointment_pack_processing.services.appointment_details_service import (
+    AppointmentDetailsService,
+)
+from appointment_pack_processing.services.deidentification_service import (
+    DeidentificationService,
+)
+from appointment_pack_processing.services.document_processing_service import (
+    DocumentProcessingService,
+)
+from appointment_pack_processing.services.image_preprocessing_service import (
+    ImagePreprocessingService,
+)
+from appointment_pack_processing.services.ocr_service import OcrService
+from appointment_pack_processing.services.openai_summary_service import OpenAiSummaryService
+from appointment_pack_processing.services.text_extraction_service import TextExtractionService
 
 
 def build_document_processing_service(settings: Settings) -> DocumentProcessingService:

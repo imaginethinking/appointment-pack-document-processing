@@ -1,3 +1,5 @@
+"""OpenAI integration for approved de-identified consultation summaries."""
+
 from dataclasses import dataclass
 
 from openai import (
@@ -32,11 +34,14 @@ class AiSummaryResponseError(AiSummaryError):
 
 
 class OpenAiSummaryPayload(BaseModel):
+    """Structured summary payload expected from OpenAI."""
+
     summary: str = Field(min_length=1)
 
     @field_validator("summary")
     @classmethod
     def validate_summary(cls, value: str) -> str:
+        """Trim the generated summary and reject whitespace-only responses."""
         normalised_value = value.strip()
 
         if not normalised_value:
@@ -47,12 +52,16 @@ class OpenAiSummaryPayload(BaseModel):
 
 @dataclass(frozen=True, slots=True)
 class OpenAiSummaryResult:
+    """Summary text and model provenance returned to the orchestration layer."""
+
     summary: str
     model_name: str
     prompt_version: str
 
 
 class OpenAiSummaryService:
+    """Generate a structured summary from approved de-identified consultation text."""
+
     SYSTEM_PROMPT = """
     You produce concise clinical summaries of approved de-identified
     consultation outcome letters.
@@ -128,6 +137,7 @@ class OpenAiSummaryService:
         maximum_output_tokens: int,
         prompt_version: str,
     ) -> None:
+        """Configure the OpenAI client and summary provenance values."""
         self.model_name = model_name
         self.maximum_output_tokens = maximum_output_tokens
         self.prompt_version = prompt_version
@@ -136,6 +146,7 @@ class OpenAiSummaryService:
             OpenAI(
                 api_key=api_key,
                 timeout=timeout_seconds,
+                # Retries stay disabled because Spring gives retry control to the user.
                 max_retries=0,
             )
             if api_key
@@ -146,6 +157,7 @@ class OpenAiSummaryService:
         self,
         approved_deidentified_text: str,
     ) -> OpenAiSummaryResult:
+        """Generate and validate a summary from approved de-identified text."""
         if self.client is None:
             raise AiSummaryUnavailableError("OpenAI is not configured")
 
@@ -197,6 +209,7 @@ class OpenAiSummaryService:
         self,
         approved_deidentified_text: str,
     ) -> str:
+        """Wrap approved text in a clear boundary for the user message."""
         return (
             "Summarise the following approved "
             "de-identified consultation letter.\n\n"

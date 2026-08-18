@@ -1,15 +1,8 @@
+"""High-level orchestration for document extraction and summarisation."""
+
 from uuid import UUID
 
 from appointment_pack_processing import __version__
-from appointment_pack_processing.appointment_details_service import (
-    AppointmentDetailsService,
-)
-from appointment_pack_processing.deidentification_service import (
-    DeidentificationService,
-)
-from appointment_pack_processing.openai_summary_service import (
-    OpenAiSummaryService,
-)
 from appointment_pack_processing.schemas import (
     AppointmentAddressDetailsResponse,
     AppointmentDetailsResponse,
@@ -18,7 +11,16 @@ from appointment_pack_processing.schemas import (
     DocumentType,
     RedactionContext,
 )
-from appointment_pack_processing.text_extraction_service import (
+from appointment_pack_processing.services.appointment_details_service import (
+    AppointmentDetailsService,
+)
+from appointment_pack_processing.services.deidentification_service import (
+    DeidentificationService,
+)
+from appointment_pack_processing.services.openai_summary_service import (
+    OpenAiSummaryService,
+)
+from appointment_pack_processing.services.text_extraction_service import (
     TextExtractionService,
 )
 
@@ -44,6 +46,8 @@ class AiInputTooLongError(ValueError):
 
 
 class DocumentProcessingService:
+    """Coordinate extraction, local processing and approved-text summarisation."""
+
     SUPPORTED_CONTENT_TYPES = frozenset(
         {
             "application/pdf",
@@ -61,6 +65,7 @@ class DocumentProcessingService:
         appointment_details_service: AppointmentDetailsService,
         openai_summary_service: OpenAiSummaryService,
     ) -> None:
+        """Configure validation limits and processing dependencies."""
         self.maximum_file_size_bytes = maximum_file_size_bytes
         self.maximum_ai_input_characters = maximum_ai_input_characters
         self.text_extraction_service = text_extraction_service
@@ -76,6 +81,7 @@ class DocumentProcessingService:
         content: bytes,
         redaction_context: RedactionContext,
     ) -> DocumentExtractionResponse:
+        """Extract document text and run the processing branch for its document type."""
         self._validate_document(
             content_type=content_type,
             content=content,
@@ -103,9 +109,12 @@ class DocumentProcessingService:
         document_id: UUID,
         approved_deidentified_text: str,
     ) -> DocumentSummaryResponse:
+        """Summarise the exact approved de-identified consultation text."""
         self._validate_approved_text(approved_deidentified_text)
 
-        summary_result = self.openai_summary_service.summarise(approved_deidentified_text)
+        summary_result = self.openai_summary_service.summarise(
+            approved_deidentified_text
+        )
 
         return DocumentSummaryResponse(
             document_id=document_id,
@@ -120,6 +129,7 @@ class DocumentProcessingService:
         document_id: UUID,
         extracted_text: str,
     ) -> DocumentExtractionResponse:
+        """Map deterministic appointment suggestions into the extraction response."""
         result = self.appointment_details_service.extract(extracted_text)
 
         address = None
@@ -160,6 +170,7 @@ class DocumentProcessingService:
         extracted_text: str,
         redaction_context: RedactionContext,
     ) -> DocumentExtractionResponse:
+        """De-identify consultation text and map it into the extraction response."""
         deidentification_result = self.deidentification_service.deidentify(
             text=extracted_text,
             context=redaction_context,
@@ -179,6 +190,7 @@ class DocumentProcessingService:
         content_type: str,
         content: bytes,
     ) -> None:
+        """Validate document presence, size and supported media type."""
         if not content:
             raise EmptyDocumentError("Document file must not be empty")
 
@@ -186,14 +198,19 @@ class DocumentProcessingService:
             raise DocumentTooLargeError("Document file exceeds the maximum size")
 
         if content_type not in self.SUPPORTED_CONTENT_TYPES:
-            raise UnsupportedContentTypeError("Only PDF, JPEG and PNG documents are supported")
+            raise UnsupportedContentTypeError(
+                "Only PDF, JPEG and PNG documents are supported"
+            )
 
     def _validate_approved_text(
         self,
         approved_deidentified_text: str,
     ) -> None:
+        """Validate approved consultation text before external summarisation."""
         if not approved_deidentified_text.strip():
-            raise ApprovedTextBlankError("Approved de-identified text must not be blank")
+            raise ApprovedTextBlankError(
+                "Approved de-identified text must not be blank"
+            )
 
         if len(approved_deidentified_text) > self.maximum_ai_input_characters:
             raise AiInputTooLongError(

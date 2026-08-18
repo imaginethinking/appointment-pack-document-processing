@@ -1,3 +1,5 @@
+"""Tesseract OCR wrapper for uploaded images and rendered PDF pages."""
+
 from io import BytesIO
 
 import pymupdf
@@ -5,7 +7,7 @@ import pytesseract
 from PIL import Image, ImageOps, UnidentifiedImageError
 from pytesseract import TesseractError, TesseractNotFoundError
 
-from appointment_pack_processing.image_preprocessing_service import (
+from appointment_pack_processing.services.image_preprocessing_service import (
     ImagePreprocessingService,
 )
 
@@ -31,6 +33,8 @@ class OcrTextNotFoundError(OcrError):
 
 
 class OcrService:
+    """Run Tesseract OCR and translate expected OCR failures."""
+
     def __init__(
         self,
         language: str,
@@ -38,6 +42,7 @@ class OcrService:
         image_preprocessing_service: ImagePreprocessingService,
         tesseract_command: str | None = None,
     ) -> None:
+        """Configure OCR language, PDF rendering and optional Tesseract path."""
         self.language = language
         self.pdf_dpi = pdf_dpi
         self.image_preprocessing_service = (
@@ -53,8 +58,10 @@ class OcrService:
         self,
         content: bytes,
     ) -> str:
+        """Decode an uploaded image and return normalised OCR text."""
         try:
             with Image.open(BytesIO(content)) as image:
+                # Apply EXIF orientation before preprocessing so phone photos are upright.
                 oriented_image = ImageOps.exif_transpose(
                     image
                 )
@@ -88,6 +95,7 @@ class OcrService:
         self,
         page: pymupdf.Page,
     ) -> str:
+        """Render one PDF page and return its normalised OCR text."""
         pixmap = page.get_pixmap(
             dpi=self.pdf_dpi,
             alpha=False,
@@ -116,6 +124,7 @@ class OcrService:
         self,
         image: Image.Image,
     ) -> str:
+        """Run Tesseract for a prepared image and translate expected failures."""
         try:
             extracted_text = pytesseract.image_to_string(
                 image,
@@ -138,6 +147,7 @@ class OcrService:
         self,
         text: str,
     ) -> str:
+        """Collapse OCR whitespace while keeping actual line boundaries."""
         normalised_lines = []
 
         for line in text.splitlines():

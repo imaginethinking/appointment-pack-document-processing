@@ -7,19 +7,6 @@ from fastapi.testclient import TestClient
 from httpx import Response
 from starlette.datastructures import UploadFile as StarletteUploadFile
 
-from appointment_pack_processing.document_processing_service import (
-    AiInputTooLongError,
-    ApprovedTextBlankError,
-    DocumentTooLargeError,
-    EmptyDocumentError,
-    UnsupportedContentTypeError,
-)
-from appointment_pack_processing.ocr_service import OcrError
-from appointment_pack_processing.openai_summary_service import (
-    AiSummaryResponseError,
-    AiSummaryTimeoutError,
-    AiSummaryUnavailableError,
-)
 from appointment_pack_processing.schemas import (
     AppointmentAddressDetailsResponse,
     AppointmentDetailsResponse,
@@ -27,7 +14,20 @@ from appointment_pack_processing.schemas import (
     DocumentSummaryResponse,
     DocumentType,
 )
-from appointment_pack_processing.text_extraction_service import TextExtractionError
+from appointment_pack_processing.services.document_processing_service import (
+    AiInputTooLongError,
+    ApprovedTextBlankError,
+    DocumentTooLargeError,
+    EmptyDocumentError,
+    UnsupportedContentTypeError,
+)
+from appointment_pack_processing.services.ocr_service import OcrError
+from appointment_pack_processing.services.openai_summary_service import (
+    AiSummaryResponseError,
+    AiSummaryTimeoutError,
+    AiSummaryUnavailableError,
+)
+from appointment_pack_processing.services.text_extraction_service import TextExtractionError
 
 
 def build_extraction_response(

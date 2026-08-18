@@ -1,6 +1,8 @@
+"""Document text extraction using embedded PDF text and OCR fallback."""
+
 import pymupdf
 
-from appointment_pack_processing.ocr_service import OcrService
+from appointment_pack_processing.services.ocr_service import OcrService
 
 
 class TextExtractionError(ValueError):
@@ -24,6 +26,8 @@ class TextNotFoundError(TextExtractionError):
 
 
 class TextExtractionService:
+    """Extract text from supported PDFs and images without persisting content."""
+
     PDF_CONTENT_TYPE = "application/pdf"
     IMAGE_CONTENT_TYPES = frozenset(
         {
@@ -37,6 +41,7 @@ class TextExtractionService:
         maximum_pdf_pages: int,
         ocr_service: OcrService,
     ) -> None:
+        """Configure the PDF page limit and OCR dependency."""
         self.maximum_pdf_pages = maximum_pdf_pages
         self.ocr_service = ocr_service
 
@@ -45,6 +50,7 @@ class TextExtractionService:
         content_type: str,
         content: bytes,
     ) -> str:
+        """Extract normalised text from a supported PDF or image."""
         if content_type == self.PDF_CONTENT_TYPE:
             return self._extract_pdf_text(content)
 
@@ -56,6 +62,7 @@ class TextExtractionService:
         )
 
     def _extract_pdf_text(self, content: bytes) -> str:
+        """Extract usable text from each PDF page and combine the results."""
         try:
             with pymupdf.open(
                 stream=content,
@@ -91,6 +98,7 @@ class TextExtractionService:
         self,
         page: pymupdf.Page,
     ) -> str:
+        """Use embedded page text when available, otherwise fall back to OCR."""
         embedded_text = self._normalise_text(
             page.get_text(
                 "text",
@@ -98,6 +106,7 @@ class TextExtractionService:
             )
         )
 
+        # Hybrid PDFs are handled page by page so scanned pages still receive OCR.
         if embedded_text:
             return embedded_text
 
@@ -107,6 +116,7 @@ class TextExtractionService:
         self,
         document: pymupdf.Document,
     ) -> None:
+        """Reject password-protected PDFs and documents above the page limit."""
         if document.needs_pass:
             raise PasswordProtectedPdfError(
                 "Password-protected PDFs are not supported"
@@ -118,6 +128,7 @@ class TextExtractionService:
             )
 
     def _normalise_text(self, text: str) -> str:
+        """Collapse whitespace while preserving line boundaries."""
         normalised_lines = []
 
         for line in text.splitlines():

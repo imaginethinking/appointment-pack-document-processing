@@ -1,3 +1,5 @@
+"""Deterministic local de-identification of consultation text."""
+
 import re
 from dataclasses import dataclass
 
@@ -6,11 +8,15 @@ from appointment_pack_processing.schemas import RedactionContext
 
 @dataclass(frozen=True, slots=True)
 class DeidentificationResult:
+    """De-identified text and the warning shown for patient review."""
+
     text: str
     processing_warning: str
 
 
 class DeidentificationService:
+    """Redact known patient values and supported identifier patterns locally."""
+
     REDACTION_PLACEHOLDER = "[REDACTED]"
 
     REVIEW_WARNING = (
@@ -112,6 +118,7 @@ class DeidentificationService:
         text: str,
         context: RedactionContext,
     ) -> DeidentificationResult:
+        """Redact supported identifiers from extracted consultation text."""
         redacted_text = text
 
         for known_value in self._prepare_known_values(
@@ -122,6 +129,7 @@ class DeidentificationService:
                 known_value,
             )
 
+        # Only labelled dates of birth are targeted so ordinary clinical dates remain intact.
         redacted_text = self._redact_labelled_value(
             redacted_text,
             self.LABELLED_DATE_OF_BIRTH_PATTERN,
@@ -162,6 +170,7 @@ class DeidentificationService:
         self,
         values: list[str],
     ) -> list[str]:
+        """Normalise, deduplicate and order known values for safe replacement."""
         unique_values: dict[str, str] = {}
 
         for value in values:
@@ -175,6 +184,7 @@ class DeidentificationService:
                 normalised_value,
             )
 
+        # Replace longer values first so shorter overlapping names do not fragment them.
         return sorted(
             unique_values.values(),
             key=len,
@@ -186,6 +196,7 @@ class DeidentificationService:
         text: str,
         value: str,
     ) -> str:
+        """Replace a known value case-insensitively while allowing flexible whitespace."""
         value_parts = value.split()
 
         escaped_value = r"[ \t]+".join(
@@ -208,6 +219,7 @@ class DeidentificationService:
         text: str,
         pattern: re.Pattern[str],
     ) -> str:
+        """Redact only the value captured after a recognised identifier label."""
         return pattern.sub(
             self._replace_labelled_value,
             text,
@@ -217,6 +229,7 @@ class DeidentificationService:
         self,
         match: re.Match[str],
     ) -> str:
+        """Keep an identifier label while replacing its captured value."""
         return (
             f"{match.group('label')}"
             f"{self.REDACTION_PLACEHOLDER}"
