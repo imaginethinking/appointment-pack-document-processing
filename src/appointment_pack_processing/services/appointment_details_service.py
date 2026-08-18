@@ -4,6 +4,31 @@ import re
 from dataclasses import dataclass
 from datetime import date, datetime, time
 
+type PatternGroups = tuple[
+    tuple[re.Pattern[str], ...],
+    tuple[re.Pattern[str], ...],
+]
+
+
+def _build_label_patterns(*labels: str) -> PatternGroups:
+    """Build preferred separator patterns and whitespace-only fallback patterns."""
+    separator_patterns = tuple(
+        re.compile(
+            rf"^\s*{label}\s*[:\-]\s*(?P<value>.+?)\s*$",
+            re.IGNORECASE,
+        )
+        for label in labels
+    )
+    whitespace_patterns = tuple(
+        re.compile(
+            rf"^\s*{label}\s+(?P<value>.+?)\s*$",
+            re.IGNORECASE,
+        )
+        for label in labels
+    )
+
+    return separator_patterns, whitespace_patterns
+
 
 @dataclass(frozen=True, slots=True)
 class AppointmentAddressDetails:
@@ -44,143 +69,68 @@ class AppointmentDetailsService:
 
     MAXIMUM_FIELD_LENGTH = 250
 
-    DATE_PATTERNS = (
-        re.compile(
-            r"^\s*On\s*[:\-]\s*(?P<value>.+?)\s*$",
-            re.IGNORECASE,
-        ),
-        re.compile(
-            r"^\s*Date\s*[:\-]\s*(?P<value>.+?)\s*$",
-            re.IGNORECASE,
-        ),
+    DATE_PATTERNS = _build_label_patterns(
+        r"On",
+        r"Date",
     )
 
-    START_TIME_PATTERNS = (
-        re.compile(
-            r"^\s*Time\s*[:\-]\s*(?P<value>.+?)\s*$",
-            re.IGNORECASE,
-        ),
-        re.compile(
-            r"^\s*Start\s+time\s*[:\-]\s*(?P<value>.+?)\s*$",
-            re.IGNORECASE,
-        ),
+    START_TIME_PATTERNS = _build_label_patterns(
+        r"Time",
+        r"Start\s+time",
     )
 
-    END_TIME_PATTERNS = (
-        re.compile(
-            r"^\s*End\s+time\s*[:\-]\s*(?P<value>.+?)\s*$",
-            re.IGNORECASE,
-        ),
-        re.compile(
-            r"^\s*Finish\s+time\s*[:\-]\s*(?P<value>.+?)\s*$",
-            re.IGNORECASE,
-        ),
+    END_TIME_PATTERNS = _build_label_patterns(
+        r"End\s+time",
+        r"Finish\s+time",
     )
 
-    CLINICIAN_PATTERNS = (
-        re.compile(
-            r"^\s*With\s*[:\-]\s*(?P<value>.+?)\s*$",
-            re.IGNORECASE,
-        ),
-        re.compile(
-            r"^\s*Clinician\s*[:\-]\s*(?P<value>.+?)\s*$",
-            re.IGNORECASE,
-        ),
-        re.compile(
-            r"^\s*Consultant\s*[:\-]\s*(?P<value>.+?)\s*$",
-            re.IGNORECASE,
-        ),
-        re.compile(
-            r"^\s*Team\s*[:\-]\s*(?P<value>.+?)\s*$",
-            re.IGNORECASE,
-        ),
+    CLINICIAN_PATTERNS = _build_label_patterns(
+        r"With",
+        r"Clinician",
+        r"Consultant",
+        r"Team",
     )
 
-    SERVICE_PATTERNS = (
-        re.compile(
-            r"^\s*Service\s*[:\-]\s*(?P<value>.+?)\s*$",
-            re.IGNORECASE,
-        ),
-        re.compile(
-            r"^\s*Service\s+type\s*[:\-]\s*(?P<value>.+?)\s*$",
-            re.IGNORECASE,
-        ),
+    SERVICE_PATTERNS = _build_label_patterns(
+        r"Service\s+type",
+        r"Service",
     )
 
-    APPOINTMENT_TYPE_PATTERNS = (
-        re.compile(
-            r"^\s*Appointment\s+type\s*[:\-]\s*(?P<value>.+?)\s*$",
-            re.IGNORECASE,
-        ),
+    APPOINTMENT_TYPE_PATTERNS = _build_label_patterns(
+        r"Appointment\s+type",
     )
 
-    LOCATION_PATTERNS = (
-        re.compile(
-            r"^\s*Location\s*[:\-]\s*(?P<value>.+?)\s*$",
-            re.IGNORECASE,
-        ),
-        re.compile(
-            r"^\s*Venue\s*[:\-]\s*(?P<value>.+?)\s*$",
-            re.IGNORECASE,
-        ),
-        re.compile(
-            r"^\s*Clinic\s*[:\-]\s*(?P<value>.+?)\s*$",
-            re.IGNORECASE,
-        ),
+    LOCATION_PATTERNS = _build_label_patterns(
+        r"Location",
+        r"Venue",
+        r"Clinic",
     )
 
-    ADDRESS_LINE_1_PATTERNS = (
-        re.compile(
-            r"^\s*Address\s*[:\-]\s*(?P<value>.+?)\s*$",
-            re.IGNORECASE,
-        ),
-        re.compile(
-            r"^\s*Address\s+line\s+1\s*[:\-]\s*(?P<value>.+?)\s*$",
-            re.IGNORECASE,
-        ),
+    ADDRESS_LINE_1_PATTERNS = _build_label_patterns(
+        r"Address\s+line\s+1",
+        r"Address",
     )
 
-    ADDRESS_LINE_2_PATTERNS = (
-        re.compile(
-            r"^\s*Address\s+line\s+2\s*[:\-]\s*(?P<value>.+?)\s*$",
-            re.IGNORECASE,
-        ),
+    ADDRESS_LINE_2_PATTERNS = _build_label_patterns(
+        r"Address\s+line\s+2",
     )
 
-    TOWN_CITY_PATTERNS = (
-        re.compile(
-            r"^\s*Town\s*[:\-]\s*(?P<value>.+?)\s*$",
-            re.IGNORECASE,
-        ),
-        re.compile(
-            r"^\s*City\s*[:\-]\s*(?P<value>.+?)\s*$",
-            re.IGNORECASE,
-        ),
-        re.compile(
-            r"^\s*Town\s*/\s*City\s*[:\-]\s*(?P<value>.+?)\s*$",
-            re.IGNORECASE,
-        ),
+    TOWN_CITY_PATTERNS = _build_label_patterns(
+        r"Town\s*/\s*City",
+        r"Town",
+        r"City",
     )
 
-    COUNTY_PATTERNS = (
-        re.compile(
-            r"^\s*County\s*[:\-]\s*(?P<value>.+?)\s*$",
-            re.IGNORECASE,
-        ),
+    COUNTY_PATTERNS = _build_label_patterns(
+        r"County",
     )
 
-    POSTCODE_PATTERNS = (
-        re.compile(
-            r"^\s*Postcode\s*[:\-]\s*(?P<value>.+?)\s*$",
-            re.IGNORECASE,
-        ),
+    POSTCODE_PATTERNS = _build_label_patterns(
+        r"Postcode",
     )
 
-    COUNTRY_PATTERNS = (
-        re.compile(
-            r"^\s*Country\s*[:\-]\s*(?P<value>.+?)\s*$",
-            re.IGNORECASE,
-        ),
+    COUNTRY_PATTERNS = _build_label_patterns(
+        r"Country",
     )
 
     DATE_FORMATS = (
@@ -271,7 +221,7 @@ class AppointmentDetailsService:
             "",
         )
 
-        # Unsupported or ambiguous date formats remain None rather than trying to guess.
+        # Unsupported or ambiguous date formats remain None rather than being guessed.
         for date_format in self.DATE_FORMATS:
             try:
                 return datetime.strptime(
@@ -286,7 +236,7 @@ class AppointmentDetailsService:
     def _extract_time(
         self,
         lines: list[str],
-        patterns: tuple[re.Pattern[str], ...],
+        patterns: PatternGroups,
     ) -> time | None:
         """Extract and normalise a supported labelled appointment time."""
         value = self._find_value(
@@ -372,24 +322,26 @@ class AppointmentDetailsService:
     def _find_value(
         self,
         lines: list[str],
-        patterns: tuple[re.Pattern[str], ...],
+        patterns: PatternGroups,
         maximum_length: int = MAXIMUM_FIELD_LENGTH,
     ) -> str | None:
-        """Return the first valid labelled value matching the supplied patterns."""
-        for line in lines:
-            for pattern in patterns:
-                match = pattern.match(line)
+        """Return the first labelled value, preferring explicit separators."""
+        # Search the whole document for separator labels before using whitespace fallback.
+        for pattern_group in patterns:
+            for line in lines:
+                for pattern in pattern_group:
+                    match = pattern.match(line)
 
-                if match is None:
-                    continue
+                    if match is None:
+                        continue
 
-                value = self._normalise_value(
-                    match.group("value"),
-                    maximum_length,
-                )
+                    value = self._normalise_value(
+                        match.group("value"),
+                        maximum_length,
+                    )
 
-                if value is not None:
-                    return value
+                    if value is not None:
+                        return value
 
         return None
 

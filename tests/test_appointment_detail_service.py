@@ -103,6 +103,78 @@ Country: United Kingdom"""
     assert result.processing_warning is None
 
 
+def test_extract_accepts_labels_with_whitespace_instead_of_separator(
+    service: AppointmentDetailsService,
+) -> None:
+    text = """Date 20/08/2026
+Start time 09:30
+End time 10:15
+Service Neurology
+Appointment type Outpatient appointment
+With Dr Smith
+Location Neurology Outpatients
+Address line 1 Example Hospital
+Address line 2 Example Road
+Town/City Exampletown
+County Exampleshire
+Postcode AB1 2DE
+Country United Kingdom"""
+
+    result = service.extract(text)
+
+    assert result.details.date == date(2026, 8, 20)
+    assert result.details.start_time == time(9, 30)
+    assert result.details.end_time == time(10, 15)
+    assert result.details.service == "Neurology"
+    assert result.details.appointment_type == "Outpatient appointment"
+    assert result.details.clinician_or_team == "Dr Smith"
+    assert result.details.location_name == "Neurology Outpatients"
+
+    assert result.details.address is not None
+    assert result.details.address.address_line_1 == "Example Hospital"
+    assert result.details.address.address_line_2 == "Example Road"
+    assert result.details.address.town_city == "Exampletown"
+    assert result.details.address.county == "Exampleshire"
+    assert result.details.address.postcode == "AB1 2DE"
+    assert result.details.address.country == "United Kingdom"
+
+    assert result.processing_warning is None
+
+
+def test_extract_prefers_separator_labels_over_whitespace_fallback(
+    service: AppointmentDetailsService,
+) -> None:
+    text = """Date 21/08/2026
+Time 10:45
+Service General Medicine
+Location Fallback Clinic
+Date: 20/08/2026
+Time: 09:30
+Service: Neurology
+Location: Preferred Clinic"""
+
+    result = service.extract(text)
+
+    assert result.details.date == date(2026, 8, 20)
+    assert result.details.start_time == time(9, 30)
+    assert result.details.service == "Neurology"
+    assert result.details.location_name == "Preferred Clinic"
+
+
+def test_extract_supports_hyphen_separator(
+    service: AppointmentDetailsService,
+) -> None:
+    result = service.extract(
+        "Date - 20/08/2026\n"
+        "Time - 09:30\n"
+        "Location - Example Hospital"
+    )
+
+    assert result.details.date == date(2026, 8, 20)
+    assert result.details.start_time == time(9, 30)
+    assert result.details.location_name == "Example Hospital"
+
+
 def test_extract_returns_partial_address_without_guessing_missing_fields(
     service: AppointmentDetailsService,
 ) -> None:
