@@ -41,17 +41,13 @@ class DeidentificationService:
     )
 
     TELEPHONE_PATTERN = re.compile(
-        (
-            r"(?<!\w)"
-            r"(?:\+44(?:[ \t]?\(0\))?|0)"
-            r"(?:[ \t().-]?\d){9,10}"
-            r"(?!\w)"
-        )
+        r"(?<!\w)"
+        r"(?:\+44(?:[ \t]?\(0\))?|0)"
+        r"(?:[ \t().-]?\d){9,10}"
+        r"(?!\w)"
     )
 
-    TEN_DIGIT_IDENTIFIER_PATTERN = re.compile(
-        r"(?<!\d)(?:\d[ \t-]?){9}\d(?!\d)"
-    )
+    TEN_DIGIT_IDENTIFIER_PATTERN = re.compile(r"(?<!\d)(?:\d[ \t-]?){9}\d(?!\d)")
 
     LABELLED_HEALTHCARE_NUMBER_PATTERN = re.compile(
         (
@@ -107,10 +103,8 @@ class DeidentificationService:
     )
 
     REPEATED_PLACEHOLDER_PATTERN = re.compile(
-        (
-            r"\[REDACTED\]"
-            r"(?:[ \t,;/|-]+\[REDACTED\])+"
-        )
+        r"\[REDACTED\]"
+        r"(?:[ \t,;/|-]+\[REDACTED\])+"
     )
 
     def deidentify(
@@ -121,9 +115,7 @@ class DeidentificationService:
         """Redact supported identifiers from extracted consultation text."""
         redacted_text = text
 
-        for known_value in self._prepare_known_values(
-            context.known_values
-        ):
+        for known_value in self._prepare_known_values(context.known_values):
             redacted_text = self._replace_literal(
                 redacted_text,
                 known_value,
@@ -199,10 +191,7 @@ class DeidentificationService:
         """Replace a known value case-insensitively while allowing flexible whitespace."""
         value_parts = value.split()
 
-        escaped_value = r"[ \t]+".join(
-            re.escape(part)
-            for part in value_parts
-        )
+        escaped_value = r"[ \t]+".join(re.escape(part) for part in value_parts)
 
         pattern = re.compile(
             rf"(?<!\w){escaped_value}(?!\w)",
@@ -230,7 +219,4 @@ class DeidentificationService:
         match: re.Match[str],
     ) -> str:
         """Keep an identifier label while replacing its captured value."""
-        return (
-            f"{match.group('label')}"
-            f"{self.REDACTION_PLACEHOLDER}"
-        )
+        return f"{match.group('label')}{self.REDACTION_PLACEHOLDER}"

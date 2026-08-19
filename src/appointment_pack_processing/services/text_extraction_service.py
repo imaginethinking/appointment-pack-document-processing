@@ -57,9 +57,7 @@ class TextExtractionService:
         if content_type in self.IMAGE_CONTENT_TYPES:
             return self.ocr_service.extract_image_text(content)
 
-        raise TextExtractionError(
-            "The document content type cannot be processed"
-        )
+        raise TextExtractionError("The document content type cannot be processed")
 
     def _extract_pdf_text(self, content: bytes) -> str:
         """Extract usable text from each PDF page and combine the results."""
@@ -70,27 +68,16 @@ class TextExtractionService:
             ) as document:
                 self._validate_pdf(document)
 
-                page_texts = [
-                    self._extract_pdf_page_text(page)
-                    for page in document
-                ]
+                page_texts = [self._extract_pdf_page_text(page) for page in document]
         except TextExtractionError:
             raise
         except Exception as exception:
-            raise UnreadablePdfError(
-                "The uploaded PDF could not be read"
-            ) from exception
+            raise UnreadablePdfError("The uploaded PDF could not be read") from exception
 
-        extracted_text = "\n\n".join(
-            page_text
-            for page_text in page_texts
-            if page_text
-        )
+        extracted_text = "\n\n".join(page_text for page_text in page_texts if page_text)
 
         if not extracted_text:
-            raise TextNotFoundError(
-                "No readable text was detected in the PDF"
-            )
+            raise TextNotFoundError("No readable text was detected in the PDF")
 
         return extracted_text
 
@@ -118,14 +105,10 @@ class TextExtractionService:
     ) -> None:
         """Reject password-protected PDFs and documents above the page limit."""
         if document.needs_pass:
-            raise PasswordProtectedPdfError(
-                "Password-protected PDFs are not supported"
-            )
+            raise PasswordProtectedPdfError("Password-protected PDFs are not supported")
 
         if document.page_count > self.maximum_pdf_pages:
-            raise PdfPageLimitExceededError(
-                "PDF exceeds the maximum supported page count"
-            )
+            raise PdfPageLimitExceededError("PDF exceeds the maximum supported page count")
 
     def _normalise_text(self, text: str) -> str:
         """Collapse whitespace while preserving line boundaries."""

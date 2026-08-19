@@ -37,10 +37,7 @@ def test_known_values_are_redacted_case_insensitively(
         ["Alex Example"],
     )
 
-    assert result == (
-        "[REDACTED] attended clinic. "
-        "[REDACTED] was reviewed."
-    )
+    assert result == ("[REDACTED] attended clinic. [REDACTED] was reviewed.")
 
 
 def test_known_values_are_normalised_and_deduplicated(
@@ -71,9 +68,7 @@ def test_longer_known_values_are_replaced_before_overlapping_shorter_values(
         ],
     )
 
-    assert result == (
-        "[REDACTED] attended with [REDACTED]."
-    )
+    assert result == ("[REDACTED] attended with [REDACTED].")
 
 
 @pytest.mark.parametrize(
@@ -120,10 +115,7 @@ def test_supported_identifier_patterns_are_redacted(
 def test_unlabelled_clinical_dates_are_not_redacted(
     service: DeidentificationService,
 ) -> None:
-    text = (
-        "The consultation occurred on 20/08/2026 "
-        "and follow-up is on 20/09/2026."
-    )
+    text = "The consultation occurred on 20/08/2026 and follow-up is on 20/09/2026."
 
     assert deidentify(service, text) == text
 

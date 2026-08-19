@@ -68,9 +68,7 @@ def test_extract_image_text_preprocesses_image_and_returns_ocr_text(
         run_ocr,
     )
 
-    result = service.extract_image_text(
-        build_png_bytes()
-    )
+    result = service.extract_image_text(build_png_bytes())
 
     assert result == "Extracted text"
     preprocessing_service.preprocess.assert_called_once()
@@ -84,9 +82,7 @@ def test_extract_image_text_rejects_unreadable_image(
         UnreadableImageError,
         match="The uploaded image could not be read",
     ):
-        service.extract_image_text(
-            b"not-an-image"
-        )
+        service.extract_image_text(b"not-an-image")
 
 
 def test_extract_image_text_rejects_empty_ocr_result(
@@ -103,9 +99,7 @@ def test_extract_image_text_rejects_empty_ocr_result(
         OcrTextNotFoundError,
         match="No readable text was detected in the uploaded image",
     ):
-        service.extract_image_text(
-            build_png_bytes()
-        )
+        service.extract_image_text(build_png_bytes())
 
 
 def test_run_ocr_translates_missing_tesseract(
@@ -119,10 +113,7 @@ def test_run_ocr_translates_missing_tesseract(
         raise TesseractNotFoundError()
 
     monkeypatch.setattr(
-        (
-            "appointment_pack_processing.services.ocr_service."
-            "pytesseract.image_to_string"
-        ),
+        ("appointment_pack_processing.services.ocr_service.pytesseract.image_to_string"),
         raise_missing_tesseract,
     )
 
@@ -153,10 +144,7 @@ def test_run_ocr_translates_tesseract_processing_error(
         )
 
     monkeypatch.setattr(
-        (
-            "appointment_pack_processing.services.ocr_service."
-            "pytesseract.image_to_string"
-        ),
+        ("appointment_pack_processing.services.ocr_service.pytesseract.image_to_string"),
         raise_tesseract_error,
     )
 
@@ -178,16 +166,8 @@ def test_run_ocr_normalises_returned_text(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     monkeypatch.setattr(
-        (
-            "appointment_pack_processing.services.ocr_service."
-            "pytesseract.image_to_string"
-        ),
-        Mock(
-            return_value=(
-                " First   line \n\n"
-                " Second\tline "
-            )
-        ),
+        ("appointment_pack_processing.services.ocr_service.pytesseract.image_to_string"),
+        Mock(return_value=(" First   line \n\n Second\tline ")),
     )
 
     result = service._run_ocr(

@@ -112,9 +112,7 @@ class DocumentProcessingService:
         """Summarise the exact approved de-identified consultation text."""
         self._validate_approved_text(approved_deidentified_text)
 
-        summary_result = self.openai_summary_service.summarise(
-            approved_deidentified_text
-        )
+        summary_result = self.openai_summary_service.summarise(approved_deidentified_text)
 
         return DocumentSummaryResponse(
             document_id=document_id,
@@ -198,9 +196,7 @@ class DocumentProcessingService:
             raise DocumentTooLargeError("Document file exceeds the maximum size")
 
         if content_type not in self.SUPPORTED_CONTENT_TYPES:
-            raise UnsupportedContentTypeError(
-                "Only PDF, JPEG and PNG documents are supported"
-            )
+            raise UnsupportedContentTypeError("Only PDF, JPEG and PNG documents are supported")
 
     def _validate_approved_text(
         self,
@@ -208,9 +204,7 @@ class DocumentProcessingService:
     ) -> None:
         """Validate approved consultation text before external summarisation."""
         if not approved_deidentified_text.strip():
-            raise ApprovedTextBlankError(
-                "Approved de-identified text must not be blank"
-            )
+            raise ApprovedTextBlankError("Approved de-identified text must not be blank")
 
         if len(approved_deidentified_text) > self.maximum_ai_input_characters:
             raise AiInputTooLongError(

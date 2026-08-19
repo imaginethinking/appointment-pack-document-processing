@@ -133,11 +133,7 @@ def test_extract_processes_appointment_letter_without_deidentification() -> None
 
     document_id = uuid4()
     content = b"appointment"
-    extracted_text = (
-        "Date: 20/08/2026\n"
-        "Time: 09:30\n"
-        "Location: Example Hospital"
-    )
+    extracted_text = "Date: 20/08/2026\nTime: 09:30\nLocation: Example Hospital"
 
     text_extraction_service.extract.return_value = extracted_text
     appointment_details_service.extract.return_value = AppointmentDetailsResult(
@@ -175,9 +171,7 @@ def test_extract_processes_appointment_letter_without_deidentification() -> None
         content_type="application/pdf",
         content=content,
     )
-    appointment_details_service.extract.assert_called_once_with(
-        extracted_text
-    )
+    appointment_details_service.extract.assert_called_once_with(extracted_text)
     deidentification_service.deidentify.assert_not_called()
 
     assert response.document_id == document_id
@@ -291,9 +285,7 @@ def test_summarise_maps_openai_result_to_api_response() -> None:
         approved_deidentified_text=approved_text,
     )
 
-    openai_summary_service.summarise.assert_called_once_with(
-        approved_text
-    )
+    openai_summary_service.summarise.assert_called_once_with(approved_text)
 
     assert response.document_id == document_id
     assert response.summary == "The patient reported improved symptoms."

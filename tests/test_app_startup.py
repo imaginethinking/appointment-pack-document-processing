@@ -29,18 +29,12 @@ def test_production_entry_point_exposes_expected_application(
     )
 
     try:
-        main_module = importlib.import_module(
-            "appointment_pack_processing.main"
-        )
+        main_module = importlib.import_module("appointment_pack_processing.main")
 
-        assert main_module.app.title == (
-            "Appointment Pack Document Processing"
-        )
+        assert main_module.app.title == ("Appointment Pack Document Processing")
         assert main_module.app.version == __version__
 
-        route_paths = set(
-            main_module.app.openapi()["paths"]
-        )
+        route_paths = set(main_module.app.openapi()["paths"])
 
         assert {
             "/health",

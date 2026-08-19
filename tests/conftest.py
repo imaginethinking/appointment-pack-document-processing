@@ -38,9 +38,7 @@ def client(
     get_settings.cache_clear()
 
     application = create_app()
-    application.dependency_overrides[get_document_processing_service] = (
-        lambda: processing_service
-    )
+    application.dependency_overrides[get_document_processing_service] = lambda: processing_service
 
     with TestClient(application) as test_client:
         yield test_client

@@ -143,18 +143,14 @@ def test_extract_uses_current_multipart_contract_and_calls_service(
     processing_service: Mock,
 ) -> None:
     document_id = uuid4()
-    processing_service.extract.return_value = build_extraction_response(
-        document_id=document_id
-    )
+    processing_service.extract.return_value = build_extraction_response(document_id=document_id)
 
     response = post_extract(
         client,
         internal_api_key,
         document_id=document_id,
         document_type="CONSULTATION_OUTCOME_LETTER",
-        redaction_context=(
-            '{"knownValues": ["Example Patient", "AB1 2CD"]}'
-        ),
+        redaction_context=('{"knownValues": ["Example Patient", "AB1 2CD"]}'),
         content=b"consultation-content",
     )
 
@@ -176,9 +172,7 @@ def test_extract_returns_current_response_shape(
     processing_service: Mock,
 ) -> None:
     document_id = uuid4()
-    processing_service.extract.return_value = build_extraction_response(
-        document_id=document_id
-    )
+    processing_service.extract.return_value = build_extraction_response(document_id=document_id)
 
     response = post_extract(
         client,
@@ -298,9 +292,7 @@ def test_extract_closes_uploaded_file(
             "Document file exceeds the maximum size",
         ),
         (
-            UnsupportedContentTypeError(
-                "Only PDF, JPEG and PNG documents are supported"
-            ),
+            UnsupportedContentTypeError("Only PDF, JPEG and PNG documents are supported"),
             415,
             "Only PDF, JPEG and PNG documents are supported",
         ),
@@ -405,9 +397,7 @@ def test_summarise_maps_blank_approved_text_to_bad_request(
     )
 
     assert response.status_code == 400
-    assert response.json() == {
-        "detail": "Approved de-identified text must not be blank"
-    }
+    assert response.json() == {"detail": "Approved de-identified text must not be blank"}
 
 
 def test_summarise_currently_rejects_empty_string_during_request_validation(

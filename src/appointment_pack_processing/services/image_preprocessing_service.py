@@ -37,9 +37,7 @@ class ImagePreprocessingService:
             cv2.COLOR_RGB2GRAY,
         )
 
-        resized_image = self._resize_if_required(
-            grayscale_image
-        )
+        resized_image = self._resize_if_required(grayscale_image)
 
         thresholded_image = cv2.adaptiveThreshold(
             resized_image,
@@ -62,9 +60,7 @@ class ImagePreprocessingService:
         if current_width >= self.minimum_image_width:
             return image
 
-        scale_factor = (
-            self.minimum_image_width / current_width
-        )
+        scale_factor = self.minimum_image_width / current_width
 
         resized_height = max(
             1,

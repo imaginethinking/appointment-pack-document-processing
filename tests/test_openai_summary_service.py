@@ -50,9 +50,7 @@ def build_completion(
 def test_constructor_configures_openai_without_automatic_retries(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    constructor = Mock(
-        return_value=Mock()
-    )
+    constructor = Mock(return_value=Mock())
 
     monkeypatch.setattr(
         summary_module,
@@ -90,23 +88,17 @@ def test_summarise_rejects_missing_openai_configuration() -> None:
         AiSummaryUnavailableError,
         match="OpenAI is not configured",
     ):
-        service.summarise(
-            "Approved de-identified consultation text."
-        )
+        service.summarise("Approved de-identified consultation text.")
 
 
 def test_summarise_returns_structured_summary_and_metadata() -> None:
     service = build_service()
 
     service.client.chat.completions.parse.return_value = build_completion(
-        parsed=OpenAiSummaryPayload(
-            summary="  The patient improved.  "
-        ),
+        parsed=OpenAiSummaryPayload(summary="  The patient improved.  "),
     )
 
-    result = service.summarise(
-        "The patient reported that symptoms had improved."
-    )
+    result = service.summarise("The patient reported that symptoms had improved.")
 
     assert result.summary == "The patient improved."
     assert result.model_name == "gpt-5-nano-2026-08-01"
@@ -118,18 +110,14 @@ def test_summarise_uses_current_prompt_and_completion_configuration() -> None:
     approved_text = "The patient reported improved symptoms."
 
     service.client.chat.completions.parse.return_value = build_completion(
-        parsed=OpenAiSummaryPayload(
-            summary="The patient improved."
-        ),
+        parsed=OpenAiSummaryPayload(summary="The patient improved."),
     )
 
     service.summarise(approved_text)
 
     service.client.chat.completions.parse.assert_called_once()
 
-    call_kwargs = (
-        service.client.chat.completions.parse.call_args.kwargs
-    )
+    call_kwargs = service.client.chat.completions.parse.call_args.kwargs
 
     assert call_kwargs["model"] == "gpt-5-nano"
     assert call_kwargs["response_format"] is OpenAiSummaryPayload
@@ -165,9 +153,7 @@ def test_summarise_rejects_completion_without_choice() -> None:
         AiSummaryResponseError,
         match="OpenAI returned no summary choice",
     ):
-        service.summarise(
-            "Approved de-identified consultation text."
-        )
+        service.summarise("Approved de-identified consultation text.")
 
 
 def test_summarise_rejects_completion_without_parsed_response() -> None:
@@ -181,16 +167,12 @@ def test_summarise_rejects_completion_without_parsed_response() -> None:
         AiSummaryResponseError,
         match="OpenAI returned no valid summary",
     ):
-        service.summarise(
-            "Approved de-identified consultation text."
-        )
+        service.summarise("Approved de-identified consultation text.")
 
 
 def test_summary_payload_rejects_whitespace_only_summary() -> None:
     with pytest.raises(ValidationError):
-        OpenAiSummaryPayload(
-            summary="   "
-        )
+        OpenAiSummaryPayload(summary="   ")
 
 
 def test_summarise_translates_timeout(
@@ -206,17 +188,13 @@ def test_summarise_translates_timeout(
     )
 
     service = build_service()
-    service.client.chat.completions.parse.side_effect = (
-        SyntheticTimeoutError()
-    )
+    service.client.chat.completions.parse.side_effect = SyntheticTimeoutError()
 
     with pytest.raises(
         AiSummaryTimeoutError,
         match="OpenAI summary request timed out",
     ):
-        service.summarise(
-            "Approved de-identified consultation text."
-        )
+        service.summarise("Approved de-identified consultation text.")
 
 
 def test_summarise_translates_connection_failure(
@@ -232,17 +210,13 @@ def test_summarise_translates_connection_failure(
     )
 
     service = build_service()
-    service.client.chat.completions.parse.side_effect = (
-        SyntheticConnectionError()
-    )
+    service.client.chat.completions.parse.side_effect = SyntheticConnectionError()
 
     with pytest.raises(
         AiSummaryUnavailableError,
         match="OpenAI could not be reached",
     ):
-        service.summarise(
-            "Approved de-identified consultation text."
-        )
+        service.summarise("Approved de-identified consultation text.")
 
 
 def test_summarise_translates_completion_length_failure(
@@ -258,38 +232,28 @@ def test_summarise_translates_completion_length_failure(
     )
 
     service = build_service()
-    service.client.chat.completions.parse.side_effect = (
-        SyntheticLengthError()
-    )
+    service.client.chat.completions.parse.side_effect = SyntheticLengthError()
 
     with pytest.raises(
         AiSummaryResponseError,
         match="OpenAI reached the completion token limit",
     ):
-        service.summarise(
-            "Approved de-identified consultation text."
-        )
+        service.summarise("Approved de-identified consultation text.")
 
 
 def test_summarise_translates_structured_response_validation_failure() -> None:
     service = build_service()
 
     with pytest.raises(ValidationError) as validation_error:
-        OpenAiSummaryPayload(
-            summary="   "
-        )
+        OpenAiSummaryPayload(summary="   ")
 
-    service.client.chat.completions.parse.side_effect = (
-        validation_error.value
-    )
+    service.client.chat.completions.parse.side_effect = validation_error.value
 
     with pytest.raises(
         AiSummaryResponseError,
         match="OpenAI returned an invalid summary",
     ):
-        service.summarise(
-            "Approved de-identified consultation text."
-        )
+        service.summarise("Approved de-identified consultation text.")
 
 
 def test_summarise_translates_other_openai_failure(
@@ -305,14 +269,10 @@ def test_summarise_translates_other_openai_failure(
     )
 
     service = build_service()
-    service.client.chat.completions.parse.side_effect = (
-        SyntheticOpenAiError()
-    )
+    service.client.chat.completions.parse.side_effect = SyntheticOpenAiError()
 
     with pytest.raises(
         AiSummaryUnavailableError,
         match="OpenAI summary request failed",
     ):
-        service.summarise(
-            "Approved de-identified consultation text."
-        )
+        service.summarise("Approved de-identified consultation text.")

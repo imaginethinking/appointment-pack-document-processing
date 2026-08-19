@@ -45,14 +45,10 @@ class OcrService:
         """Configure OCR language, PDF rendering and optional Tesseract path."""
         self.language = language
         self.pdf_dpi = pdf_dpi
-        self.image_preprocessing_service = (
-            image_preprocessing_service
-        )
+        self.image_preprocessing_service = image_preprocessing_service
 
         if tesseract_command:
-            pytesseract.pytesseract.tesseract_cmd = (
-                tesseract_command
-            )
+            pytesseract.pytesseract.tesseract_cmd = tesseract_command
 
     def extract_image_text(
         self,
@@ -62,32 +58,18 @@ class OcrService:
         try:
             with Image.open(BytesIO(content)) as image:
                 # Apply EXIF orientation before preprocessing so phone photos are upright.
-                oriented_image = ImageOps.exif_transpose(
-                    image
-                )
+                oriented_image = ImageOps.exif_transpose(image)
 
-                prepared_image = (
-                    self.image_preprocessing_service.preprocess(
-                        oriented_image
-                    )
-                )
+                prepared_image = self.image_preprocessing_service.preprocess(oriented_image)
 
-                extracted_text = self._run_ocr(
-                    prepared_image
-                )
+                extracted_text = self._run_ocr(prepared_image)
         except UnidentifiedImageError as exception:
-            raise UnreadableImageError(
-                "The uploaded image could not be read"
-            ) from exception
+            raise UnreadableImageError("The uploaded image could not be read") from exception
         except OSError as exception:
-            raise UnreadableImageError(
-                "The uploaded image could not be read"
-            ) from exception
+            raise UnreadableImageError("The uploaded image could not be read") from exception
 
         if not extracted_text:
-            raise OcrTextNotFoundError(
-                "No readable text was detected in the uploaded image"
-            )
+            raise OcrTextNotFoundError("No readable text was detected in the uploaded image")
 
         return extracted_text
 
@@ -110,15 +92,9 @@ class OcrService:
             pixmap.samples,
         )
 
-        prepared_image = (
-            self.image_preprocessing_service.preprocess(
-                image
-            )
-        )
+        prepared_image = self.image_preprocessing_service.preprocess(image)
 
-        return self._run_ocr(
-            prepared_image
-        )
+        return self._run_ocr(prepared_image)
 
     def _run_ocr(
         self,
@@ -131,17 +107,11 @@ class OcrService:
                 lang=self.language,
             )
         except TesseractNotFoundError as exception:
-            raise OcrUnavailableError(
-                "Tesseract OCR is not installed or configured"
-            ) from exception
+            raise OcrUnavailableError("Tesseract OCR is not installed or configured") from exception
         except TesseractError as exception:
-            raise OcrProcessingError(
-                "Tesseract failed to process the document"
-            ) from exception
+            raise OcrProcessingError("Tesseract failed to process the document") from exception
 
-        return self._normalise_text(
-            extracted_text
-        )
+        return self._normalise_text(extracted_text)
 
     def _normalise_text(
         self,
@@ -151,15 +121,9 @@ class OcrService:
         normalised_lines = []
 
         for line in text.splitlines():
-            normalised_line = " ".join(
-                line.split()
-            )
+            normalised_line = " ".join(line.split())
 
             if normalised_line:
-                normalised_lines.append(
-                    normalised_line
-                )
+                normalised_lines.append(normalised_line)
 
-        return "\n".join(
-            normalised_lines
-        )
+        return "\n".join(normalised_lines)

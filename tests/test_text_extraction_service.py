@@ -206,8 +206,6 @@ def test_extract_pdf_rejects_document_with_no_readable_text(
 def test_normalise_text_collapses_whitespace_and_blank_lines(
     service: TextExtractionService,
 ) -> None:
-    result = service._normalise_text(
-        "  First   line  \n\n Second\tline "
-    )
+    result = service._normalise_text("  First   line  \n\n Second\tline ")
 
     assert result == "First line\nSecond line"

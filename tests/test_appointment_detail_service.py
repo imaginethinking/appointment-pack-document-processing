@@ -31,11 +31,7 @@ def test_extract_normalises_supported_dates(
     document_date: str,
     expected_date: date,
 ) -> None:
-    result = service.extract(
-        f"Date: {document_date}\n"
-        "Time: 09:30\n"
-        "Location: Example Hospital"
-    )
+    result = service.extract(f"Date: {document_date}\nTime: 09:30\nLocation: Example Hospital")
 
     assert result.details.date == expected_date
 
@@ -56,11 +52,7 @@ def test_extract_normalises_supported_start_times(
     document_time: str,
     expected_time: time,
 ) -> None:
-    result = service.extract(
-        "Date: 20/08/2026\n"
-        f"Time: {document_time}\n"
-        "Location: Example Hospital"
-    )
+    result = service.extract(f"Date: 20/08/2026\nTime: {document_time}\nLocation: Example Hospital")
 
     assert result.details.start_time == expected_time
 
@@ -164,11 +156,7 @@ Location: Preferred Clinic"""
 def test_extract_supports_hyphen_separator(
     service: AppointmentDetailsService,
 ) -> None:
-    result = service.extract(
-        "Date - 20/08/2026\n"
-        "Time - 09:30\n"
-        "Location - Example Hospital"
-    )
+    result = service.extract("Date - 20/08/2026\nTime - 09:30\nLocation - Example Hospital")
 
     assert result.details.date == date(2026, 8, 20)
     assert result.details.start_time == time(9, 30)
@@ -179,10 +167,7 @@ def test_extract_returns_partial_address_without_guessing_missing_fields(
     service: AppointmentDetailsService,
 ) -> None:
     result = service.extract(
-        "Date: 20/08/2026\n"
-        "Time: 09:30\n"
-        "Address: Example Hospital\n"
-        "Postcode: AB1 2DE"
+        "Date: 20/08/2026\nTime: 09:30\nAddress: Example Hospital\nPostcode: AB1 2DE"
     )
 
     assert result.details.address is not None
@@ -198,11 +183,7 @@ def test_extract_returns_partial_address_without_guessing_missing_fields(
 def test_extract_leaves_unparseable_values_as_none(
     service: AppointmentDetailsService,
 ) -> None:
-    result = service.extract(
-        "Date: sometime next week\n"
-        "Time: morning\n"
-        "Location: Example Hospital"
-    )
+    result = service.extract("Date: sometime next week\nTime: morning\nLocation: Example Hospital")
 
     assert result.details.date is None
     assert result.details.start_time is None
@@ -215,9 +196,7 @@ def test_extract_leaves_unparseable_values_as_none(
 def test_extract_warns_when_no_supported_fields_are_found(
     service: AppointmentDetailsService,
 ) -> None:
-    result = service.extract(
-        "Please attend the hospital for your forthcoming appointment."
-    )
+    result = service.extract("Please attend the hospital for your forthcoming appointment.")
 
     assert result.details.date is None
     assert result.details.start_time is None
@@ -233,10 +212,7 @@ def test_extract_warns_when_no_supported_fields_are_found(
 def test_extract_warns_when_core_fields_are_missing(
     service: AppointmentDetailsService,
 ) -> None:
-    result = service.extract(
-        "Service: Neurology\n"
-        "With: Dr Smith"
-    )
+    result = service.extract("Service: Neurology\nWith: Dr Smith")
 
     assert result.processing_warning == (
         "Some core appointment details could not be identified or normalised: "

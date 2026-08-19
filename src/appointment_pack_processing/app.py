@@ -44,9 +44,7 @@ def build_document_processing_service(settings: Settings) -> DocumentProcessingS
     appointment_details_service = AppointmentDetailsService()
 
     openai_api_key = (
-        settings.openai_api_key.get_secret_value()
-        if settings.openai_api_key is not None
-        else None
+        settings.openai_api_key.get_secret_value() if settings.openai_api_key is not None else None
     )
 
     openai_summary_service = OpenAiSummaryService(
