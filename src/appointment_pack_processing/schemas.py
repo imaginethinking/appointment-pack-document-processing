@@ -1,3 +1,6 @@
+"""Pydantic request and response contracts used by the internal API."""
+
+# Alias the datetime types so fields named date/time do not shadow their type names.
 from datetime import date as Date
 from datetime import time as Time
 from enum import StrEnum
@@ -8,6 +11,8 @@ from pydantic import BaseModel, ConfigDict, Field
 
 
 class ApiModel(BaseModel):
+    """Base API model with Spring-compatible alias serialisation."""
+
     model_config = ConfigDict(
         populate_by_name=True,
         serialize_by_alias=True,
@@ -15,11 +20,15 @@ class ApiModel(BaseModel):
 
 
 class DocumentType(StrEnum):
+    """Document types supported by the processing service."""
+
     APPOINTMENT_LETTER = "APPOINTMENT_LETTER"
     CONSULTATION_OUTCOME_LETTER = "CONSULTATION_OUTCOME_LETTER"
 
 
 class HealthResponse(ApiModel):
+    """Health information returned by the service."""
+
     status: Literal["UP"]
     service: str
     version: str
@@ -27,11 +36,15 @@ class HealthResponse(ApiModel):
 
 
 class ModelMetadataResponse(ApiModel):
+    """Model name and revision metadata."""
+
     name: str
     revision: str
 
 
 class RedactionContext(ApiModel):
+    """Known patient values supplied for deterministic local redaction."""
+
     known_values: list[str] = Field(
         default_factory=list,
         alias="knownValues",
@@ -40,6 +53,8 @@ class RedactionContext(ApiModel):
 
 
 class AppointmentAddressDetailsResponse(ApiModel):
+    """Partial appointment address extracted from an appointment letter."""
+
     address_line_1: str | None = Field(
         default=None,
         alias="addressLine1",
@@ -63,6 +78,8 @@ class AppointmentAddressDetailsResponse(ApiModel):
 
 
 class AppointmentDetailsResponse(ApiModel):
+    """Structured appointment suggestions extracted from an appointment letter."""
+
     date: Date | None = None
 
     start_time: Time | None = Field(
@@ -96,6 +113,8 @@ class AppointmentDetailsResponse(ApiModel):
 
 
 class DocumentExtractionResponse(ApiModel):
+    """Result returned after local extraction and document-specific processing."""
+
     document_id: UUID = Field(
         alias="documentId",
     )
@@ -125,6 +144,8 @@ class DocumentExtractionResponse(ApiModel):
 
 
 class DocumentSummaryRequest(ApiModel):
+    """Approved de-identified consultation text submitted for summarisation."""
+
     document_id: UUID = Field(
         alias="documentId",
     )
@@ -136,6 +157,8 @@ class DocumentSummaryRequest(ApiModel):
 
 
 class DocumentSummaryResponse(ApiModel):
+    """Generated consultation summary and its model provenance."""
+
     document_id: UUID = Field(
         alias="documentId",
     )

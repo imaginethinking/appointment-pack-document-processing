@@ -1,3 +1,5 @@
+"""Typed environment configuration for the document-processing service."""
+
 from functools import lru_cache
 from typing import Literal
 
@@ -6,13 +8,17 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
+    """Application settings loaded from APP_ environment variables."""
+
     app_name: str = "Appointment Pack Document Processing"
     environment: Literal["development", "test", "production"] = "development"
     internal_api_key: SecretStr
+
     maximum_file_size_bytes: int = Field(
         default=10 * 1024 * 1024,
-        gt=0
+        gt=0,
     )
+
     maximum_pdf_pages: int = Field(
         default=50,
         gt=0,
@@ -22,17 +28,21 @@ class Settings(BaseSettings):
         default="eng",
         min_length=1,
     )
+
     ocr_dpi: int = Field(
         default=300,
         ge=150,
         le=600,
     )
+
     ocr_preprocessing_enabled: bool = True
+
     ocr_minimum_image_width: int = Field(
         default=1600,
         ge=800,
         le=4000,
     )
+
     tesseract_command: str | None = None
 
     openai_api_key: SecretStr | None = None
@@ -75,4 +85,5 @@ class Settings(BaseSettings):
 
 @lru_cache
 def get_settings() -> Settings:
+    """Load and cache application settings for the current process."""
     return Settings()
