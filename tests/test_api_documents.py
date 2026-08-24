@@ -59,7 +59,7 @@ def build_extraction_response(
             ),
         ),
         processing_warning=None,
-        processor_version="0.6.1",
+        processor_version="0.6.2",
     )
 
 
@@ -203,7 +203,7 @@ def test_extract_returns_current_response_shape(
             },
         },
         "processingWarning": None,
-        "processorVersion": "0.6.1",
+        "processorVersion": "0.6.2",
     }
 
 
@@ -350,7 +350,7 @@ def test_summarise_uses_current_request_and_response_contract(
     processing_service.summarise.return_value = DocumentSummaryResponse(
         document_id=document_id,
         summary="The patient reported improved symptoms.",
-        processor_version="0.6.1",
+        processor_version="0.6.2",
         model_name="gpt-5-nano",
         prompt_version="consultation-summary-v1",
     )
@@ -372,7 +372,7 @@ def test_summarise_uses_current_request_and_response_contract(
     assert response.json() == {
         "documentId": str(document_id),
         "summary": "The patient reported improved symptoms.",
-        "processorVersion": "0.6.1",
+        "processorVersion": "0.6.2",
         "modelName": "gpt-5-nano",
         "promptVersion": "consultation-summary-v1",
     }

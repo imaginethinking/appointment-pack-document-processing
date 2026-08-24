@@ -133,13 +133,68 @@ Country United Kingdom"""
     assert result.processing_warning is None
 
 
-def test_extract_prefers_separator_labels_over_whitespace_fallback(
+def test_extract_supports_values_on_following_lines(
+    service: AppointmentDetailsService,
+) -> None:
+    text = """Date:
+20 August 2026
+Time:
+09:30
+Location:
+Example Hospital"""
+
+    result = service.extract(text)
+
+    assert result.details.date == date(2026, 8, 20)
+    assert result.details.start_time == time(9, 30)
+    assert result.details.location_name == "Example Hospital"
+
+
+def test_extract_does_not_take_another_label_as_next_line_value(
+    service: AppointmentDetailsService,
+) -> None:
+    result = service.extract("End time:\nService: Neurology\nLocation: Example Hospital")
+
+    assert result.details.end_time is None
+    assert result.details.service == "Neurology"
+
+
+def test_extract_supports_combined_date_and_time_label(
+    service: AppointmentDetailsService,
+) -> None:
+    result = service.extract(
+        "Date and time: Thursday 20 August 2026 at 9:30am\nLocation: Example Hospital"
+    )
+
+    assert result.details.date == date(2026, 8, 20)
+    assert result.details.start_time == time(9, 30)
+
+
+def test_extract_supports_combined_date_and_time_on_following_line(
+    service: AppointmentDetailsService,
+) -> None:
+    result = service.extract(
+        "Appointment date and time:\n20 August 2026 at 14:15\nLocation: Example Hospital"
+    )
+
+    assert result.details.date == date(2026, 8, 20)
+    assert result.details.start_time == time(14, 15)
+
+
+def test_extract_prefers_separator_labels_when_context_is_equivalent(
     service: AppointmentDetailsService,
 ) -> None:
     text = """Date 21/08/2026
 Time 10:45
 Service General Medicine
 Location Fallback Clinic
+Administrative section
+Administrative section
+Administrative section
+Administrative section
+Administrative section
+Administrative section
+Administrative section
 Date: 20/08/2026
 Time: 09:30
 Service: Neurology
@@ -198,6 +253,12 @@ def test_extract_prefers_candidate_with_stronger_appointment_context(
     text = """Date 01/08/2026
 Reference REF-001
 Administrative information
+Administrative information
+Administrative information
+Administrative information
+Administrative information
+Administrative information
+Administrative information
 Date 20/08/2026
 Time 09:30
 Service Neurology
@@ -239,7 +300,153 @@ Country United Kingdom"""
     assert result.details.address.country == "United Kingdom"
 
 
-def test_extract_keeps_best_available_candidate_without_context_threshold(
+def test_extract_handles_town_or_city_label_without_partial_label_match(
+    service: AppointmentDetailsService,
+) -> None:
+    result = service.extract(
+        "Date: 20/08/2026\nTime: 09:30\nVenue: Example Unit\nTown or city: Eastmere"
+    )
+
+    assert result.details.address is not None
+    assert result.details.address.town_city == "Eastmere"
+
+
+def test_extract_reconstructs_narrative_date_and_time_across_lines(
+    service: AppointmentDetailsService,
+) -> None:
+    text = """Dear Patient, we have arranged an appointment for you on 17 September
+2026 at
+14:15 with the Cardiac Physiology Team.
+Clinic details
+Service: Cardiology Diagnostics
+Venue: Diagnostic Investigations Unit"""
+
+    result = service.extract(text)
+
+    assert result.details.date == date(2026, 9, 17)
+    assert result.details.start_time == time(14, 15)
+
+
+def test_extract_reconstructs_narrative_date_split_after_month(
+    service: AppointmentDetailsService,
+) -> None:
+    text = """Your appointment has been arranged for 17 September
+2026 at 14:15.
+Location: Example Hospital"""
+
+    result = service.extract(text)
+
+    assert result.details.date == date(2026, 9, 17)
+    assert result.details.start_time == time(14, 15)
+
+
+def test_extract_narrative_clinician_team(
+    service: AppointmentDetailsService,
+) -> None:
+    text = """We have arranged an appointment for you on 17 September 2026 at
+14:15 with the Cardiac Physiology Team. Please bring your medication list.
+Location: Example Hospital"""
+
+    result = service.extract(text)
+
+    assert result.details.clinician_or_team == "Cardiac Physiology Team"
+
+
+def test_extract_narrative_appointment_type(
+    service: AppointmentDetailsService,
+) -> None:
+    text = """Your appointment is for
+Ambulatory blood pressure monitor fitting. Please bring your medication list.
+Date: 17/09/2026
+Time: 14:15
+Location: Example Hospital"""
+
+    result = service.extract(text)
+
+    assert result.details.appointment_type == "Ambulatory blood pressure monitor fitting"
+
+
+def test_extract_narrative_location(
+    service: AppointmentDetailsService,
+) -> None:
+    text = """We have arranged an appointment for you on 17 September 2026 at 14:15.
+Please attend the Diagnostic Investigations Unit, Example University Hospital.
+Service: Cardiology"""
+
+    result = service.extract(text)
+
+    assert result.details.location_name == (
+        "Diagnostic Investigations Unit, Example University Hospital"
+    )
+
+
+def test_extract_labelled_location_outweighs_narrative_location(
+    service: AppointmentDetailsService,
+) -> None:
+    text = """We have arranged an appointment for you on 17 September 2026 at 14:15.
+Please attend the Diagnostic Investigations Unit, Example University Hospital.
+Service: Cardiology
+Venue: Diagnostic Investigations Unit
+Address: 12 Hospital Way
+Town or city: Exampletown"""
+
+    result = service.extract(text)
+
+    assert result.details.location_name == "Diagnostic Investigations Unit"
+
+
+def test_extract_narrative_end_time(
+    service: AppointmentDetailsService,
+) -> None:
+    text = """Your appointment is on 17 September 2026 at 14:15.
+The appointment is expected to finish
+at approximately 14:45.
+Location: Example Hospital"""
+
+    result = service.extract(text)
+
+    assert result.details.end_time == time(14, 45)
+
+
+def test_extract_does_not_use_office_hours_as_appointment_end_time(
+    service: AppointmentDetailsService,
+) -> None:
+    text = """Your appointment is on 17 September 2026 at 14:15.
+Location: Example Hospital
+The Appointments Office is open from 09:00 to 17:00."""
+
+    result = service.extract(text)
+
+    assert result.details.start_time == time(14, 15)
+    assert result.details.end_time is None
+
+
+def test_extract_does_not_use_phone_number_as_time(
+    service: AppointmentDetailsService,
+) -> None:
+    text = """Your appointment is on 17 September 2026 at 14:15.
+Location: Example Hospital
+If you cannot attend, call 01632 960500."""
+
+    result = service.extract(text)
+
+    assert result.details.start_time == time(14, 15)
+
+
+def test_extract_narrative_service_when_strong_service_wording_is_present(
+    service: AppointmentDetailsService,
+) -> None:
+    text = """You are booked for an appointment with the Respiratory Medicine Department.
+Date: 20/08/2026
+Time: 09:30
+Location: Example Hospital"""
+
+    result = service.extract(text)
+
+    assert result.details.service == "Respiratory Medicine Department"
+
+
+def test_extract_keeps_best_available_candidate_without_confidence_threshold(
     service: AppointmentDetailsService,
 ) -> None:
     result = service.extract("Date 20/08/2026")
@@ -247,6 +454,31 @@ def test_extract_keeps_best_available_candidate_without_context_threshold(
     assert result.details.date == date(2026, 8, 20)
     assert result.processing_warning is not None
     assert "start time and location" in result.processing_warning
+
+
+def test_extract_warns_when_different_candidates_are_equally_plausible(
+    service: AppointmentDetailsService,
+) -> None:
+    text = """Date: 20/08/2026
+Time: 09:30
+Location: First Clinic
+Administrative text
+Administrative text
+Administrative text
+Administrative text
+Administrative text
+Administrative text
+Administrative text
+Date: 21/08/2026
+Time: 10:30
+Location: Second Clinic"""
+
+    result = service.extract(text)
+
+    assert result.details.date == date(2026, 8, 20)
+    assert result.processing_warning is not None
+    assert "Multiple plausible values were identified" in result.processing_warning
+    assert "date" in result.processing_warning
 
 
 def test_extract_returns_partial_address_without_guessing_missing_fields(
@@ -282,7 +514,7 @@ def test_extract_leaves_unparseable_values_as_none(
 def test_extract_warns_when_no_supported_fields_are_found(
     service: AppointmentDetailsService,
 ) -> None:
-    result = service.extract("Please attend the hospital for your forthcoming appointment.")
+    result = service.extract("Please bring your medication list with you.")
 
     assert result.details.date is None
     assert result.details.start_time is None
@@ -290,7 +522,7 @@ def test_extract_warns_when_no_supported_fields_are_found(
     assert result.details.address is None
 
     assert result.processing_warning == (
-        "No supported labelled appointment fields were identified. "
+        "No supported appointment details were identified. "
         "Review the extracted text and enter the appointment details manually."
     )
 
@@ -305,3 +537,83 @@ def test_extract_warns_when_core_fields_are_missing(
         "date, start time, and location. "
         "Review the extracted text before confirming the appointment."
     )
+
+
+def test_extract_regression_for_metadata_and_appointment_detail_blocks(
+    service: AppointmentDetailsService,
+) -> None:
+    text = """Patient correspondence
+Example University Hospital
+Outpatient appointment
+Patient Example Patient
+Date of birth 14/02/1967
+NHS number 9990000001
+Reference APT-01-A-2026
+Address 18 Example Close, Exampletown
+Letter date 19/08/2026
+Dear Patient,
+Your appointment details are shown below.
+Date 03 September 2026
+Time 10:20
+End time
+Service Cardiology
+Appointment type New outpatient consultation
+With Hypertension Clinic
+Location Cardiology Outpatients
+Address 12 Hospital Way
+Town/City Exampletown
+County Exampleshire
+Postcode AB1 2DE
+Country United Kingdom"""
+
+    result = service.extract(text)
+
+    assert result.details.date == date(2026, 9, 3)
+    assert result.details.start_time == time(10, 20)
+    assert result.details.service == "Cardiology"
+    assert result.details.appointment_type == "New outpatient consultation"
+    assert result.details.clinician_or_team == "Hypertension Clinic"
+    assert result.details.location_name == "Cardiology Outpatients"
+    assert result.details.address is not None
+    assert result.details.address.address_line_1 == "12 Hospital Way"
+
+
+def test_extract_regression_for_wrapped_narrative_letter(
+    service: AppointmentDetailsService,
+) -> None:
+    text = """Example University Hospital
+Appointment information
+Patient: Example Patient
+Date of birth: 14/02/1967
+NHS number: 9990000001
+Address: 18 Example Close, Exampletown, Exampleshire, AB4 7CD, United Kingdom
+Dear Patient, we have arranged an appointment for you on 17 September 2026 at
+14:15 with the Cardiac Physiology Team. Please attend the Diagnostic
+Investigations Unit, Example University Hospital. The appointment is for
+Ambulatory blood pressure monitor fitting. The appointment is expected to finish
+at approximately 14:45.
+Clinic details
+Service: Cardiology Diagnostics
+Venue: Diagnostic Investigations Unit
+Address: 12 Hospital Way
+Town or city: Exampletown
+County: Exampleshire
+Postcode: AB1 2DE
+Country: United Kingdom"""
+
+    result = service.extract(text)
+
+    assert result.details.date == date(2026, 9, 17)
+    assert result.details.start_time == time(14, 15)
+    assert result.details.end_time == time(14, 45)
+    assert result.details.service == "Cardiology Diagnostics"
+    assert result.details.appointment_type == "Ambulatory blood pressure monitor fitting"
+    assert result.details.clinician_or_team == "Cardiac Physiology Team"
+    assert result.details.location_name == "Diagnostic Investigations Unit"
+    assert result.details.address is not None
+    assert result.details.address.address_line_1 == "12 Hospital Way"
+    assert result.details.address.town_city == "Exampletown"
+    assert result.details.address.county == "Exampleshire"
+    assert result.details.address.postcode == "AB1 2DE"
+    assert result.details.address.country == "United Kingdom"
+    assert result.processing_warning is None
