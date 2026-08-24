@@ -163,6 +163,92 @@ def test_extract_supports_hyphen_separator(
     assert result.details.location_name == "Example Hospital"
 
 
+def test_extract_continues_after_unparseable_date_candidate(
+    service: AppointmentDetailsService,
+) -> None:
+    text = """Date of birth 14/02/1967
+Reference REF-001
+Date 03 September 2026
+Time 10:20
+Service Cardiology
+Location Cardiology Outpatients"""
+
+    result = service.extract(text)
+
+    assert result.details.date == date(2026, 9, 3)
+
+
+def test_extract_continues_after_unparseable_time_candidate(
+    service: AppointmentDetailsService,
+) -> None:
+    text = """Time to be confirmed
+Date 03 September 2026
+Time 10:20
+Service Cardiology
+Location Cardiology Outpatients"""
+
+    result = service.extract(text)
+
+    assert result.details.start_time == time(10, 20)
+
+
+def test_extract_prefers_candidate_with_stronger_appointment_context(
+    service: AppointmentDetailsService,
+) -> None:
+    text = """Date 01/08/2026
+Reference REF-001
+Administrative information
+Date 20/08/2026
+Time 09:30
+Service Neurology
+Appointment type Outpatient appointment
+With Neurology Team
+Location Neurology Outpatients"""
+
+    result = service.extract(text)
+
+    assert result.details.date == date(2026, 8, 20)
+
+
+def test_extract_uses_context_to_select_appointment_address(
+    service: AppointmentDetailsService,
+) -> None:
+    text = """Patient Example Patient
+Date of birth 14/02/1967
+Address 18 Example Close
+Reference REF-001
+Date 03 September 2026
+Time 10:20
+Service Cardiology
+Appointment type New outpatient consultation
+With Hypertension Clinic
+Location Cardiology Outpatients
+Address 12 Hospital Way
+Town/City Exampletown
+County Exampleshire
+Postcode AB1 2DE
+Country United Kingdom"""
+
+    result = service.extract(text)
+
+    assert result.details.address is not None
+    assert result.details.address.address_line_1 == "12 Hospital Way"
+    assert result.details.address.town_city == "Exampletown"
+    assert result.details.address.county == "Exampleshire"
+    assert result.details.address.postcode == "AB1 2DE"
+    assert result.details.address.country == "United Kingdom"
+
+
+def test_extract_keeps_best_available_candidate_without_context_threshold(
+    service: AppointmentDetailsService,
+) -> None:
+    result = service.extract("Date 20/08/2026")
+
+    assert result.details.date == date(2026, 8, 20)
+    assert result.processing_warning is not None
+    assert "start time and location" in result.processing_warning
+
+
 def test_extract_returns_partial_address_without_guessing_missing_fields(
     service: AppointmentDetailsService,
 ) -> None:

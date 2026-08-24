@@ -8,6 +8,7 @@ type PatternGroups = tuple[
     tuple[re.Pattern[str], ...],
     tuple[re.Pattern[str], ...],
 ]
+type CandidateMap = dict[str, list["_FieldCandidate"]]
 
 
 def _build_label_patterns(*labels: str) -> PatternGroups:
@@ -28,6 +29,15 @@ def _build_label_patterns(*labels: str) -> PatternGroups:
     )
 
     return separator_patterns, whitespace_patterns
+
+
+@dataclass(frozen=True, slots=True)
+class _FieldCandidate:
+    """Internal labelled field candidate together with its document position."""
+
+    value: str
+    line_index: int
+    uses_separator: bool
 
 
 @dataclass(frozen=True, slots=True)
@@ -68,6 +78,21 @@ class AppointmentDetailsService:
     """Extract conservative appointment suggestions from labelled document lines."""
 
     MAXIMUM_FIELD_LENGTH = 250
+    CONTEXT_WINDOW_LINES = 6
+
+    DATE_FIELD = "date"
+    START_TIME_FIELD = "start_time"
+    END_TIME_FIELD = "end_time"
+    SERVICE_FIELD = "service"
+    APPOINTMENT_TYPE_FIELD = "appointment_type"
+    CLINICIAN_FIELD = "clinician_or_team"
+    LOCATION_FIELD = "location_name"
+    ADDRESS_LINE_1_FIELD = "address_line_1"
+    ADDRESS_LINE_2_FIELD = "address_line_2"
+    TOWN_CITY_FIELD = "town_city"
+    COUNTY_FIELD = "county"
+    POSTCODE_FIELD = "postcode"
+    COUNTRY_FIELD = "country"
 
     DATE_PATTERNS = _build_label_patterns(
         r"On",
@@ -159,34 +184,36 @@ class AppointmentDetailsService:
     ) -> AppointmentDetailsResult:
         """Extract supported appointment fields from labelled document lines."""
         lines = text.splitlines()
+        candidates = self._collect_candidates(lines)
+        self._remove_unparseable_temporal_candidates(candidates)
 
-        address = self._extract_address(lines)
+        address = self._extract_address(candidates)
 
         details = AppointmentDetails(
-            date=self._extract_date(lines),
+            date=self._extract_date(candidates),
             start_time=self._extract_time(
-                lines,
-                self.START_TIME_PATTERNS,
+                candidates,
+                self.START_TIME_FIELD,
             ),
             end_time=self._extract_time(
-                lines,
-                self.END_TIME_PATTERNS,
+                candidates,
+                self.END_TIME_FIELD,
             ),
-            service=self._find_value(
-                lines,
-                self.SERVICE_PATTERNS,
+            service=self._select_value(
+                candidates,
+                self.SERVICE_FIELD,
             ),
-            appointment_type=self._find_value(
-                lines,
-                self.APPOINTMENT_TYPE_PATTERNS,
+            appointment_type=self._select_value(
+                candidates,
+                self.APPOINTMENT_TYPE_FIELD,
             ),
-            clinician_or_team=self._find_value(
-                lines,
-                self.CLINICIAN_PATTERNS,
+            clinician_or_team=self._select_value(
+                candidates,
+                self.CLINICIAN_FIELD,
             ),
-            location_name=self._find_value(
-                lines,
-                self.LOCATION_PATTERNS,
+            location_name=self._select_value(
+                candidates,
+                self.LOCATION_FIELD,
             ),
             address=address,
         )
@@ -196,19 +223,129 @@ class AppointmentDetailsService:
             processing_warning=self._build_warning(details),
         )
 
-    def _extract_date(
+    def _collect_candidates(
         self,
         lines: list[str],
+    ) -> CandidateMap:
+        """Collect all supported labelled field candidates from the document."""
+        return {
+            self.DATE_FIELD: self._find_candidates(
+                lines,
+                self.DATE_PATTERNS,
+            ),
+            self.START_TIME_FIELD: self._find_candidates(
+                lines,
+                self.START_TIME_PATTERNS,
+            ),
+            self.END_TIME_FIELD: self._find_candidates(
+                lines,
+                self.END_TIME_PATTERNS,
+            ),
+            self.SERVICE_FIELD: self._find_candidates(
+                lines,
+                self.SERVICE_PATTERNS,
+            ),
+            self.APPOINTMENT_TYPE_FIELD: self._find_candidates(
+                lines,
+                self.APPOINTMENT_TYPE_PATTERNS,
+            ),
+            self.CLINICIAN_FIELD: self._find_candidates(
+                lines,
+                self.CLINICIAN_PATTERNS,
+            ),
+            self.LOCATION_FIELD: self._find_candidates(
+                lines,
+                self.LOCATION_PATTERNS,
+            ),
+            self.ADDRESS_LINE_1_FIELD: self._find_candidates(
+                lines,
+                self.ADDRESS_LINE_1_PATTERNS,
+                maximum_length=150,
+            ),
+            self.ADDRESS_LINE_2_FIELD: self._find_candidates(
+                lines,
+                self.ADDRESS_LINE_2_PATTERNS,
+                maximum_length=150,
+            ),
+            self.TOWN_CITY_FIELD: self._find_candidates(
+                lines,
+                self.TOWN_CITY_PATTERNS,
+                maximum_length=100,
+            ),
+            self.COUNTY_FIELD: self._find_candidates(
+                lines,
+                self.COUNTY_PATTERNS,
+                maximum_length=100,
+            ),
+            self.POSTCODE_FIELD: self._find_candidates(
+                lines,
+                self.POSTCODE_PATTERNS,
+                maximum_length=20,
+            ),
+            self.COUNTRY_FIELD: self._find_candidates(
+                lines,
+                self.COUNTRY_PATTERNS,
+                maximum_length=100,
+            ),
+        }
+
+    def _remove_unparseable_temporal_candidates(
+        self,
+        candidates: CandidateMap,
+    ) -> None:
+        """Remove invalid dates and times while preserving later usable candidates."""
+        candidates[self.DATE_FIELD] = [
+            candidate
+            for candidate in candidates[self.DATE_FIELD]
+            if self._parse_date(candidate.value) is not None
+        ]
+        candidates[self.START_TIME_FIELD] = [
+            candidate
+            for candidate in candidates[self.START_TIME_FIELD]
+            if self._parse_time(candidate.value) is not None
+        ]
+        candidates[self.END_TIME_FIELD] = [
+            candidate
+            for candidate in candidates[self.END_TIME_FIELD]
+            if self._parse_time(candidate.value) is not None
+        ]
+
+    def _extract_date(
+        self,
+        candidates: CandidateMap,
     ) -> date | None:
-        """Extract and normalise a supported labelled appointment date."""
-        value = self._find_value(
-            lines,
-            self.DATE_PATTERNS,
+        """Select and normalise the strongest supported appointment date candidate."""
+        candidate = self._select_candidate(
+            candidates,
+            self.DATE_FIELD,
         )
 
-        if value is None:
+        if candidate is None:
             return None
 
+        return self._parse_date(candidate.value)
+
+    def _extract_time(
+        self,
+        candidates: CandidateMap,
+        field_name: str,
+    ) -> time | None:
+        """Select and normalise the strongest supported appointment time candidate."""
+        candidate = self._select_candidate(
+            candidates,
+            field_name,
+        )
+
+        if candidate is None:
+            return None
+
+        return self._parse_time(candidate.value)
+
+    def _parse_date(
+        self,
+        value: str,
+    ) -> date | None:
+        """Normalise one candidate using the supported deterministic date formats."""
         normalised_value = re.sub(
             r"(\d{1,2})(st|nd|rd|th)\b",
             r"\1",
@@ -221,7 +358,6 @@ class AppointmentDetailsService:
             "",
         )
 
-        # Unsupported or ambiguous date formats remain None rather than being guessed.
         for date_format in self.DATE_FORMATS:
             try:
                 return datetime.strptime(
@@ -233,20 +369,11 @@ class AppointmentDetailsService:
 
         return None
 
-    def _extract_time(
+    def _parse_time(
         self,
-        lines: list[str],
-        patterns: PatternGroups,
+        value: str,
     ) -> time | None:
-        """Extract and normalise a supported labelled appointment time."""
-        value = self._find_value(
-            lines,
-            patterns,
-        )
-
-        if value is None:
-            return None
-
+        """Normalise one candidate using the supported deterministic time formats."""
         normalised_value = re.sub(
             r"\s*(am|pm)$",
             r" \1",
@@ -269,39 +396,33 @@ class AppointmentDetailsService:
 
     def _extract_address(
         self,
-        lines: list[str],
+        candidates: CandidateMap,
     ) -> AppointmentAddressDetails | None:
-        """Extract any supported labelled appointment address fields."""
+        """Extract the strongest supported appointment address field candidates."""
         address = AppointmentAddressDetails(
-            address_line_1=self._find_value(
-                lines,
-                self.ADDRESS_LINE_1_PATTERNS,
-                maximum_length=150,
+            address_line_1=self._select_value(
+                candidates,
+                self.ADDRESS_LINE_1_FIELD,
             ),
-            address_line_2=self._find_value(
-                lines,
-                self.ADDRESS_LINE_2_PATTERNS,
-                maximum_length=150,
+            address_line_2=self._select_value(
+                candidates,
+                self.ADDRESS_LINE_2_FIELD,
             ),
-            town_city=self._find_value(
-                lines,
-                self.TOWN_CITY_PATTERNS,
-                maximum_length=100,
+            town_city=self._select_value(
+                candidates,
+                self.TOWN_CITY_FIELD,
             ),
-            county=self._find_value(
-                lines,
-                self.COUNTY_PATTERNS,
-                maximum_length=100,
+            county=self._select_value(
+                candidates,
+                self.COUNTY_FIELD,
             ),
-            postcode=self._find_value(
-                lines,
-                self.POSTCODE_PATTERNS,
-                maximum_length=20,
+            postcode=self._select_value(
+                candidates,
+                self.POSTCODE_FIELD,
             ),
-            country=self._find_value(
-                lines,
-                self.COUNTRY_PATTERNS,
-                maximum_length=100,
+            country=self._select_value(
+                candidates,
+                self.COUNTRY_FIELD,
             ),
         )
 
@@ -319,16 +440,23 @@ class AppointmentDetailsService:
 
         return address
 
-    def _find_value(
+    def _find_candidates(
         self,
         lines: list[str],
         patterns: PatternGroups,
         maximum_length: int = MAXIMUM_FIELD_LENGTH,
-    ) -> str | None:
-        """Return the first labelled value, preferring explicit separators."""
-        # Search the whole document for separator labels before using whitespace fallback.
-        for pattern_group in patterns:
-            for line in lines:
+    ) -> list[_FieldCandidate]:
+        """Return every usable labelled candidate with its line position."""
+        candidates: list[_FieldCandidate] = []
+        matched_line_indices: set[int] = set()
+
+        for pattern_group_index, pattern_group in enumerate(patterns):
+            uses_separator = pattern_group_index == 0
+
+            for line_index, line in enumerate(lines):
+                if line_index in matched_line_indices:
+                    continue
+
                 for pattern in pattern_group:
                     match = pattern.match(line)
 
@@ -340,10 +468,97 @@ class AppointmentDetailsService:
                         maximum_length,
                     )
 
-                    if value is not None:
-                        return value
+                    if value is None:
+                        continue
 
-        return None
+                    candidates.append(
+                        _FieldCandidate(
+                            value=value,
+                            line_index=line_index,
+                            uses_separator=uses_separator,
+                        )
+                    )
+                    matched_line_indices.add(line_index)
+                    break
+
+        return candidates
+
+    def _select_value(
+        self,
+        candidates: CandidateMap,
+        field_name: str,
+    ) -> str | None:
+        """Return the strongest available string candidate for one field."""
+        candidate = self._select_candidate(
+            candidates,
+            field_name,
+        )
+
+        if candidate is None:
+            return None
+
+        return candidate.value
+
+    def _select_candidate(
+        self,
+        candidates: CandidateMap,
+        field_name: str,
+    ) -> _FieldCandidate | None:
+        """Select a candidate using nearby recognised fields as generic context."""
+        field_candidates = candidates[field_name]
+
+        if not field_candidates:
+            return None
+
+        return max(
+            field_candidates,
+            key=lambda candidate: (
+                self._context_score(
+                    candidate,
+                    field_name,
+                    candidates,
+                ),
+                candidate.uses_separator,
+                -candidate.line_index,
+            ),
+        )
+
+    def _context_score(
+        self,
+        candidate: _FieldCandidate,
+        field_name: str,
+        candidates: CandidateMap,
+    ) -> int:
+        """Score how densely a candidate sits among other recognised fields."""
+        score = 0
+
+        for other_field_name, other_candidates in candidates.items():
+            if other_field_name == field_name:
+                continue
+
+            strongest_nearby_score = 0
+
+            for other_candidate in other_candidates:
+                distance = abs(candidate.line_index - other_candidate.line_index)
+
+                if distance == 0 or distance > self.CONTEXT_WINDOW_LINES:
+                    continue
+
+                nearby_score = self.CONTEXT_WINDOW_LINES + 1 - distance
+
+                # Formatting may vary, so mixed styles still contribute. Matching styles
+                # receive the full proximity score because they more often form one block.
+                if candidate.uses_separator != other_candidate.uses_separator:
+                    nearby_score //= 2
+
+                strongest_nearby_score = max(
+                    strongest_nearby_score,
+                    nearby_score,
+                )
+
+            score += strongest_nearby_score
+
+        return score
 
     def _normalise_value(
         self,
