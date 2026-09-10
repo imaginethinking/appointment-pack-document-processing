@@ -1,3 +1,5 @@
+"""Tests for deterministic consultation deidentification."""
+
 import pytest
 
 from appointment_pack_processing.schemas import RedactionContext
@@ -31,6 +33,7 @@ def deidentify(
 def test_known_values_are_redacted_case_insensitively(
     service: DeidentificationService,
 ) -> None:
+    """Checks that known patient values are redacted without depending on letter case."""
     result = deidentify(
         service,
         "ALEX EXAMPLE attended clinic. Alex Example was reviewed.",
@@ -43,6 +46,7 @@ def test_known_values_are_redacted_case_insensitively(
 def test_known_values_are_normalised_and_deduplicated(
     service: DeidentificationService,
 ) -> None:
+    """Checks that repeated known values are normalised before redaction."""
     result = deidentify(
         service,
         "Alex   Example attended clinic.",
@@ -59,6 +63,7 @@ def test_known_values_are_normalised_and_deduplicated(
 def test_longer_known_values_are_replaced_before_overlapping_shorter_values(
     service: DeidentificationService,
 ) -> None:
+    """Checks that longer known values are redacted before shorter overlapping values."""
     result = deidentify(
         service,
         "Alex Example attended with Example.",
@@ -109,12 +114,14 @@ def test_supported_identifier_patterns_are_redacted(
     text: str,
     expected: str,
 ) -> None:
+    """Checks that the supported identifier patterns are replaced."""
     assert deidentify(service, text) == expected
 
 
 def test_unlabelled_clinical_dates_are_not_redacted(
     service: DeidentificationService,
 ) -> None:
+    """Checks that ordinary unlabelled clinical dates remain in the consultation text."""
     text = "The consultation occurred on 20/08/2026 and follow-up is on 20/09/2026."
 
     assert deidentify(service, text) == text
@@ -123,6 +130,7 @@ def test_unlabelled_clinical_dates_are_not_redacted(
 def test_adjacent_repeated_placeholders_are_collapsed(
     service: DeidentificationService,
 ) -> None:
+    """Checks that adjacent redaction placeholders are collapsed into one."""
     result = deidentify(
         service,
         "Alex Example, AB1 2DE",
@@ -135,6 +143,7 @@ def test_adjacent_repeated_placeholders_are_collapsed(
 def test_deidentify_returns_human_review_warning(
     service: DeidentificationService,
 ) -> None:
+    """Checks that deidentification always returns the privacy review warning."""
     result = service.deidentify(
         text="No identifiers in this sentence.",
         context=RedactionContext(),

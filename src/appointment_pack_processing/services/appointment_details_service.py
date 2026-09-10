@@ -105,7 +105,8 @@ class AppointmentDetailsResult:
     details: AppointmentDetails
     processing_warning: str | None
 
-
+# [AI-ASSISTED: ChatGPT, 2026-08-25]
+# AI assistance was used to generate regular expressions for pattern matching strings.
 class AppointmentDetailsService:
     """Extract deterministic appointment suggestions from structured and narrative text."""
 

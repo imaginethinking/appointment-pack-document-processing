@@ -1,3 +1,5 @@
+"""Tests for the document extraction and summarisation API routes."""
+
 from datetime import date, time
 from unittest.mock import Mock
 from uuid import UUID, uuid4
@@ -95,6 +97,7 @@ def post_extract(
 
 
 def test_extract_requires_internal_api_key(client: TestClient) -> None:
+    """Checks that document extraction requires the internal API key."""
     response = client.post(
         "/internal/v1/documents/extract",
         data={
@@ -116,6 +119,7 @@ def test_extract_requires_internal_api_key(client: TestClient) -> None:
 
 
 def test_extract_rejects_incorrect_internal_api_key(client: TestClient) -> None:
+    """Checks that document extraction rejects an incorrect internal API key."""
     response = client.post(
         "/internal/v1/documents/extract",
         headers={"X-Internal-Api-Key": "incorrect-key"},
@@ -142,6 +146,7 @@ def test_extract_uses_current_multipart_contract_and_calls_service(
     internal_api_key: str,
     processing_service: Mock,
 ) -> None:
+    """Checks that extraction passes the expected multipart values to the processing service."""
     document_id = uuid4()
     processing_service.extract.return_value = build_extraction_response(document_id=document_id)
 
@@ -171,6 +176,7 @@ def test_extract_returns_current_response_shape(
     internal_api_key: str,
     processing_service: Mock,
 ) -> None:
+    """Checks the response returned for a successful appointment extraction."""
     document_id = uuid4()
     processing_service.extract.return_value = build_extraction_response(document_id=document_id)
 
@@ -220,6 +226,7 @@ def test_extract_rejects_invalid_redaction_context(
     processing_service: Mock,
     redaction_context: str,
 ) -> None:
+    """Checks that invalid redaction context data is rejected."""
     response = post_extract(
         client,
         internal_api_key,
@@ -236,6 +243,7 @@ def test_extract_reads_only_maximum_size_plus_one_byte(
     internal_api_key: str,
     processing_service: Mock,
 ) -> None:
+    """Checks that uploads are only read far enough to detect the size limit."""
     processing_service.extract.side_effect = DocumentTooLargeError(
         "Document file exceeds the maximum size"
     )
@@ -258,6 +266,7 @@ def test_extract_closes_uploaded_file(
     processing_service: Mock,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    """Checks that the uploaded file is closed after extraction finishes."""
     processing_service.extract.return_value = build_extraction_response()
     closed_filenames: list[str | None] = []
     original_close = StarletteUploadFile.close
@@ -316,6 +325,7 @@ def test_extract_preserves_processing_error_mapping(
     expected_status: int,
     expected_detail: str,
 ) -> None:
+    """Checks that expected processing failures use the correct HTTP status."""
     processing_service.extract.side_effect = exception
 
     response = post_extract(
@@ -328,6 +338,7 @@ def test_extract_preserves_processing_error_mapping(
 
 
 def test_summarise_requires_internal_api_key(client: TestClient) -> None:
+    """Checks that consultation summarisation requires the internal API key."""
     response = client.post(
         "/internal/v1/documents/summarise",
         json={
@@ -345,6 +356,7 @@ def test_summarise_uses_current_request_and_response_contract(
     internal_api_key: str,
     processing_service: Mock,
 ) -> None:
+    """Checks the request and response used for a successful consultation summary."""
     document_id = uuid4()
     approved_text = "The patient reported improved symptoms."
     processing_service.summarise.return_value = DocumentSummaryResponse(
@@ -383,6 +395,7 @@ def test_summarise_maps_blank_approved_text_to_bad_request(
     internal_api_key: str,
     processing_service: Mock,
 ) -> None:
+    """Checks that blank approved text returns a bad request response."""
     processing_service.summarise.side_effect = ApprovedTextBlankError(
         "Approved de-identified text must not be blank"
     )
@@ -405,6 +418,7 @@ def test_summarise_currently_rejects_empty_string_during_request_validation(
     internal_api_key: str,
     processing_service: Mock,
 ) -> None:
+    """Checks that an empty approved text value is rejected during request validation."""
     response = client.post(
         "/internal/v1/documents/summarise",
         headers={"X-Internal-Api-Key": internal_api_key},
@@ -423,6 +437,7 @@ def test_summarise_maps_oversized_approved_text_to_content_too_large(
     internal_api_key: str,
     processing_service: Mock,
 ) -> None:
+    """Checks that approved text above the limit returns a content too large response."""
     processing_service.summarise.side_effect = AiInputTooLongError(
         "Approved de-identified text exceeds the maximum supported length"
     )
@@ -470,6 +485,7 @@ def test_summarise_preserves_sanitised_ai_error_mapping(
     expected_status: int,
     expected_detail: str,
 ) -> None:
+    """Checks that summary provider failures are returned using the expected safe messages."""
     processing_service.summarise.side_effect = exception
 
     response = client.post(

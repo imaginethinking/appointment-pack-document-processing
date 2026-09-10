@@ -1,3 +1,5 @@
+"""Tests for PDF and image text extraction."""
+
 from unittest.mock import Mock
 
 import pymupdf
@@ -68,6 +70,7 @@ def test_extract_dispatches_jpeg_to_image_ocr(
     service: TextExtractionService,
     ocr_service: Mock,
 ) -> None:
+    """Checks that JPEG documents are sent to image OCR."""
     ocr_service.extract_image_text.return_value = "Image text"
     content = b"jpeg-content"
 
@@ -84,6 +87,7 @@ def test_extract_dispatches_png_to_image_ocr(
     service: TextExtractionService,
     ocr_service: Mock,
 ) -> None:
+    """Checks that PNG documents are sent to image OCR."""
     ocr_service.extract_image_text.return_value = "Image text"
     content = b"png-content"
 
@@ -99,6 +103,7 @@ def test_extract_dispatches_png_to_image_ocr(
 def test_extract_rejects_unsupported_content_type(
     service: TextExtractionService,
 ) -> None:
+    """Checks that unsupported content types are rejected."""
     with pytest.raises(
         TextExtractionError,
         match="The document content type cannot be processed",
@@ -113,6 +118,7 @@ def test_extract_pdf_uses_embedded_text_without_ocr(
     service: TextExtractionService,
     ocr_service: Mock,
 ) -> None:
+    """Checks that usable embedded PDF text is returned without running OCR."""
     result = service.extract(
         "application/pdf",
         build_pdf("Embedded PDF text"),
@@ -126,6 +132,7 @@ def test_extract_pdf_uses_ocr_only_for_pages_without_embedded_text(
     service: TextExtractionService,
     ocr_service: Mock,
 ) -> None:
+    """Checks that OCR is used only for PDF pages without usable embedded text."""
     ocr_service.extract_pdf_page_text.return_value = "Scanned page text"
 
     result = service.extract(
@@ -143,6 +150,7 @@ def test_extract_pdf_uses_ocr_only_for_pages_without_embedded_text(
 def test_extract_pdf_rejects_password_protected_document(
     service: TextExtractionService,
 ) -> None:
+    """Checks that password protected PDFs are rejected."""
     with pytest.raises(
         PasswordProtectedPdfError,
         match="Password-protected PDFs are not supported",
@@ -156,6 +164,7 @@ def test_extract_pdf_rejects_password_protected_document(
 def test_extract_pdf_rejects_document_above_page_limit(
     ocr_service: Mock,
 ) -> None:
+    """Checks that PDFs above the configured page limit are rejected."""
     service = TextExtractionService(
         maximum_pdf_pages=1,
         ocr_service=ocr_service,
@@ -177,6 +186,7 @@ def test_extract_pdf_rejects_document_above_page_limit(
 def test_extract_pdf_translates_unreadable_content(
     service: TextExtractionService,
 ) -> None:
+    """Checks that unreadable PDF data is translated into the expected error."""
     with pytest.raises(
         UnreadablePdfError,
         match="The uploaded PDF could not be read",
@@ -191,6 +201,7 @@ def test_extract_pdf_rejects_document_with_no_readable_text(
     service: TextExtractionService,
     ocr_service: Mock,
 ) -> None:
+    """Checks that PDFs with no usable embedded or OCR text are rejected."""
     ocr_service.extract_pdf_page_text.return_value = ""
 
     with pytest.raises(
@@ -206,6 +217,7 @@ def test_extract_pdf_rejects_document_with_no_readable_text(
 def test_normalise_text_collapses_whitespace_and_blank_lines(
     service: TextExtractionService,
 ) -> None:
+    """Checks that extracted text spacing is cleaned while line boundaries are preserved."""
     result = service._normalise_text("  First   line  \n\n Second\tline ")
 
     assert result == "First line\nSecond line"

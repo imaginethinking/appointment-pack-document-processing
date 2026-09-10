@@ -1,3 +1,5 @@
+"""Tests for OCR image and PDF page processing."""
+
 from io import BytesIO
 from types import SimpleNamespace
 from unittest.mock import Mock
@@ -61,6 +63,7 @@ def test_extract_image_text_preprocesses_image_and_returns_ocr_text(
     preprocessing_service: Mock,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    """Checks that uploaded images are prepared before OCR and return normalised text."""
     run_ocr = Mock(return_value="Extracted text")
     monkeypatch.setattr(
         service,
@@ -78,6 +81,7 @@ def test_extract_image_text_preprocesses_image_and_returns_ocr_text(
 def test_extract_image_text_rejects_unreadable_image(
     service: OcrService,
 ) -> None:
+    """Checks that unreadable image data is reported as an OCR input error."""
     with pytest.raises(
         UnreadableImageError,
         match="The uploaded image could not be read",
@@ -89,6 +93,7 @@ def test_extract_image_text_rejects_empty_ocr_result(
     service: OcrService,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    """Checks that an image with no usable OCR text is rejected."""
     monkeypatch.setattr(
         service,
         "_run_ocr",
@@ -106,10 +111,12 @@ def test_run_ocr_translates_missing_tesseract(
     service: OcrService,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    """Checks that a missing Tesseract executable is translated into the expected error."""
     def raise_missing_tesseract(
         *args: object,
         **kwargs: object,
     ) -> str:
+        """Raises the missing Tesseract error used by this test."""
         raise TesseractNotFoundError()
 
     monkeypatch.setattr(
@@ -134,10 +141,12 @@ def test_run_ocr_translates_tesseract_processing_error(
     service: OcrService,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    """Checks that Tesseract processing failures are translated into the expected error."""
     def raise_tesseract_error(
         *args: object,
         **kwargs: object,
     ) -> str:
+        """Raises the Tesseract processing error used by this test."""
         raise TesseractError(
             1,
             "synthetic failure",
@@ -165,6 +174,7 @@ def test_run_ocr_normalises_returned_text(
     service: OcrService,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    """Checks that OCR output is normalised before it is returned."""
     monkeypatch.setattr(
         ("appointment_pack_processing.services.ocr_service.pytesseract.image_to_string"),
         Mock(return_value=(" First   line \n\n Second\tline ")),
@@ -186,6 +196,7 @@ def test_extract_pdf_page_renders_at_configured_dpi_and_preprocesses(
     preprocessing_service: Mock,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    """Checks that PDF pages use the configured render DPI and image preprocessing."""
     pixmap = SimpleNamespace(
         width=2,
         height=1,

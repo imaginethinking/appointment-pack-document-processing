@@ -14,6 +14,8 @@ class DeidentificationResult:
     processing_warning: str
 
 
+# [AI-ASSISTED: ChatGPT, 2026-08-04]
+# Used to generate regular expression patterns for supported identifier types.
 class DeidentificationService:
     """Redact known patient values and supported identifier patterns locally."""
 

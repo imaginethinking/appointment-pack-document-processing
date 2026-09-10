@@ -1,3 +1,5 @@
+"""Create the FastAPI application and its document processing services."""
+
 from fastapi import FastAPI
 
 from appointment_pack_processing import __version__

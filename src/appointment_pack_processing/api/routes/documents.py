@@ -1,3 +1,5 @@
+"""Routes for document extraction and approved consultation summarisation."""
+
 from typing import Annotated
 from uuid import UUID
 

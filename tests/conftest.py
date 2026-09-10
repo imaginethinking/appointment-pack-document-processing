@@ -1,3 +1,5 @@
+"""Shared pytest fixtures for the document processing service tests."""
+
 from collections.abc import Iterator
 from unittest.mock import Mock
 

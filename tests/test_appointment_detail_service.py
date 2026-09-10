@@ -1,3 +1,7 @@
+"""Tests for deterministic appointment detail extraction."""
+# [AI-ASSISTED: ChatGPT, 2026-08-25]
+# AI assistance was used to generate fake textual data to feed into tests.
+
 from datetime import date, time
 
 import pytest
@@ -31,6 +35,7 @@ def test_extract_normalises_supported_dates(
     document_date: str,
     expected_date: date,
 ) -> None:
+    """Checks that supported appointment date formats are normalised correctly."""
     result = service.extract(f"Date: {document_date}\nTime: 09:30\nLocation: Example Hospital")
 
     assert result.details.date == expected_date
@@ -52,6 +57,7 @@ def test_extract_normalises_supported_start_times(
     document_time: str,
     expected_time: time,
 ) -> None:
+    """Checks that supported appointment time formats are normalised correctly."""
     result = service.extract(f"Date: 20/08/2026\nTime: {document_time}\nLocation: Example Hospital")
 
     assert result.details.start_time == expected_time
@@ -60,6 +66,7 @@ def test_extract_normalises_supported_start_times(
 def test_extract_reads_supported_labelled_fields(
     service: AppointmentDetailsService,
 ) -> None:
+    """Checks that supported labelled appointment fields are extracted."""
     text = """Date: 20/08/2026
 Start time: 09:30
 End time: 10:15
@@ -98,6 +105,7 @@ Country: United Kingdom"""
 def test_extract_accepts_labels_with_whitespace_instead_of_separator(
     service: AppointmentDetailsService,
 ) -> None:
+    """Checks that labelled values can use whitespace instead of a separator."""
     text = """Date 20/08/2026
 Start time 09:30
 End time 10:15
@@ -136,6 +144,7 @@ Country United Kingdom"""
 def test_extract_supports_values_on_following_lines(
     service: AppointmentDetailsService,
 ) -> None:
+    """Checks that labelled values can be read from the following line."""
     text = """Date:
 20 August 2026
 Time:
@@ -153,6 +162,7 @@ Example Hospital"""
 def test_extract_does_not_take_another_label_as_next_line_value(
     service: AppointmentDetailsService,
 ) -> None:
+    """Checks that another field label is not treated as a missing value."""
     result = service.extract("End time:\nService: Neurology\nLocation: Example Hospital")
 
     assert result.details.end_time is None
@@ -162,6 +172,7 @@ def test_extract_does_not_take_another_label_as_next_line_value(
 def test_extract_supports_combined_date_and_time_label(
     service: AppointmentDetailsService,
 ) -> None:
+    """Checks that a combined date and time label is split into both fields."""
     result = service.extract(
         "Date and time: Thursday 20 August 2026 at 9:30am\nLocation: Example Hospital"
     )
@@ -173,6 +184,7 @@ def test_extract_supports_combined_date_and_time_label(
 def test_extract_supports_combined_date_and_time_on_following_line(
     service: AppointmentDetailsService,
 ) -> None:
+    """Checks that a combined date and time value can appear on the following line."""
     result = service.extract(
         "Appointment date and time:\n20 August 2026 at 14:15\nLocation: Example Hospital"
     )
@@ -184,6 +196,7 @@ def test_extract_supports_combined_date_and_time_on_following_line(
 def test_extract_prefers_separator_labels_when_context_is_equivalent(
     service: AppointmentDetailsService,
 ) -> None:
+    """Checks that a clearly separated label is preferred when the surrounding evidence is equal."""
     text = """Date 21/08/2026
 Time 10:45
 Service General Medicine
@@ -211,6 +224,7 @@ Location: Preferred Clinic"""
 def test_extract_supports_hyphen_separator(
     service: AppointmentDetailsService,
 ) -> None:
+    """Checks that a hyphen can separate a supported label from its value."""
     result = service.extract("Date - 20/08/2026\nTime - 09:30\nLocation - Example Hospital")
 
     assert result.details.date == date(2026, 8, 20)
@@ -221,6 +235,7 @@ def test_extract_supports_hyphen_separator(
 def test_extract_continues_after_unparseable_date_candidate(
     service: AppointmentDetailsService,
 ) -> None:
+    """Checks that an invalid date candidate does not prevent a later valid date from being used."""
     text = """Date of birth 14/02/1967
 Reference REF-001
 Date 03 September 2026
@@ -236,6 +251,7 @@ Location Cardiology Outpatients"""
 def test_extract_continues_after_unparseable_time_candidate(
     service: AppointmentDetailsService,
 ) -> None:
+    """Checks that an invalid time candidate does not prevent a later valid time from being used."""
     text = """Time to be confirmed
 Date 03 September 2026
 Time 10:20
@@ -250,6 +266,7 @@ Location Cardiology Outpatients"""
 def test_extract_prefers_candidate_with_stronger_appointment_context(
     service: AppointmentDetailsService,
 ) -> None:
+    """Checks that a candidate with stronger nearby appointment evidence is preferred."""
     text = """Date 01/08/2026
 Reference REF-001
 Administrative information
@@ -274,6 +291,7 @@ Location Neurology Outpatients"""
 def test_extract_uses_context_to_select_appointment_address(
     service: AppointmentDetailsService,
 ) -> None:
+    """Checks that nearby appointment details help select the most likely address."""
     text = """Patient Example Patient
 Date of birth 14/02/1967
 Address 18 Example Close
@@ -303,6 +321,7 @@ Country United Kingdom"""
 def test_extract_handles_town_or_city_label_without_partial_label_match(
     service: AppointmentDetailsService,
 ) -> None:
+    """Checks that the town or city label is matched as a complete supported label."""
     result = service.extract(
         "Date: 20/08/2026\nTime: 09:30\nVenue: Example Unit\nTown or city: Eastmere"
     )
@@ -314,6 +333,7 @@ def test_extract_handles_town_or_city_label_without_partial_label_match(
 def test_extract_reconstructs_narrative_date_and_time_across_lines(
     service: AppointmentDetailsService,
 ) -> None:
+    """Checks that narrative date and time wording can be reconstructed across lines."""
     text = """Dear Patient, we have arranged an appointment for you on 17 September
 2026 at
 14:15 with the Cardiac Physiology Team.
@@ -330,6 +350,7 @@ Venue: Diagnostic Investigations Unit"""
 def test_extract_reconstructs_narrative_date_split_after_month(
     service: AppointmentDetailsService,
 ) -> None:
+    """Checks that a narrative date split after the month can still be extracted."""
     text = """Your appointment has been arranged for 17 September
 2026 at 14:15.
 Location: Example Hospital"""
@@ -343,6 +364,7 @@ Location: Example Hospital"""
 def test_extract_narrative_clinician_team(
     service: AppointmentDetailsService,
 ) -> None:
+    """Checks that clinician or team details can be found in narrative text."""
     text = """We have arranged an appointment for you on 17 September 2026 at
 14:15 with the Cardiac Physiology Team. Please bring your medication list.
 Location: Example Hospital"""
@@ -355,6 +377,7 @@ Location: Example Hospital"""
 def test_extract_narrative_appointment_type(
     service: AppointmentDetailsService,
 ) -> None:
+    """Checks that an appointment type can be found in narrative text."""
     text = """Your appointment is for
 Ambulatory blood pressure monitor fitting. Please bring your medication list.
 Date: 17/09/2026
@@ -369,6 +392,7 @@ Location: Example Hospital"""
 def test_extract_narrative_location(
     service: AppointmentDetailsService,
 ) -> None:
+    """Checks that an appointment location can be found in narrative text."""
     text = """We have arranged an appointment for you on 17 September 2026 at 14:15.
 Please attend the Diagnostic Investigations Unit, Example University Hospital.
 Service: Cardiology"""
@@ -383,6 +407,7 @@ Service: Cardiology"""
 def test_extract_labelled_location_outweighs_narrative_location(
     service: AppointmentDetailsService,
 ) -> None:
+    """Checks that a labelled location is preferred over a weaker narrative location."""
     text = """We have arranged an appointment for you on 17 September 2026 at 14:15.
 Please attend the Diagnostic Investigations Unit, Example University Hospital.
 Service: Cardiology
@@ -398,6 +423,7 @@ Town or city: Exampletown"""
 def test_extract_narrative_end_time(
     service: AppointmentDetailsService,
 ) -> None:
+    """Checks that an appointment end time can be found in narrative text."""
     text = """Your appointment is on 17 September 2026 at 14:15.
 The appointment is expected to finish
 at approximately 14:45.
@@ -411,6 +437,7 @@ Location: Example Hospital"""
 def test_extract_does_not_use_office_hours_as_appointment_end_time(
     service: AppointmentDetailsService,
 ) -> None:
+    """Checks that general office hours are not mistaken for an appointment end time."""
     text = """Your appointment is on 17 September 2026 at 14:15.
 Location: Example Hospital
 The Appointments Office is open from 09:00 to 17:00."""
@@ -424,6 +451,7 @@ The Appointments Office is open from 09:00 to 17:00."""
 def test_extract_does_not_use_phone_number_as_time(
     service: AppointmentDetailsService,
 ) -> None:
+    """Checks that a telephone number is not mistaken for an appointment time."""
     text = """Your appointment is on 17 September 2026 at 14:15.
 Location: Example Hospital
 If you cannot attend, call 01632 960500."""
@@ -436,6 +464,7 @@ If you cannot attend, call 01632 960500."""
 def test_extract_narrative_service_when_strong_service_wording_is_present(
     service: AppointmentDetailsService,
 ) -> None:
+    """Checks that strong narrative service wording can provide the service name."""
     text = """You are booked for an appointment with the Respiratory Medicine Department.
 Date: 20/08/2026
 Time: 09:30
@@ -449,6 +478,7 @@ Location: Example Hospital"""
 def test_extract_keeps_best_available_candidate_without_confidence_threshold(
     service: AppointmentDetailsService,
 ) -> None:
+    """Checks that the strongest available value is kept even when the evidence is limited."""
     result = service.extract("Date 20/08/2026")
 
     assert result.details.date == date(2026, 8, 20)
@@ -459,6 +489,7 @@ def test_extract_keeps_best_available_candidate_without_confidence_threshold(
 def test_extract_warns_when_different_candidates_are_equally_plausible(
     service: AppointmentDetailsService,
 ) -> None:
+    """Checks that close competing values produce a review warning."""
     text = """Date: 20/08/2026
 Time: 09:30
 Location: First Clinic
@@ -484,6 +515,7 @@ Location: Second Clinic"""
 def test_extract_returns_partial_address_without_guessing_missing_fields(
     service: AppointmentDetailsService,
 ) -> None:
+    """Checks that partial addresses are returned without filling missing values."""
     result = service.extract(
         "Date: 20/08/2026\nTime: 09:30\nAddress: Example Hospital\nPostcode: AB1 2DE"
     )
@@ -501,6 +533,7 @@ def test_extract_returns_partial_address_without_guessing_missing_fields(
 def test_extract_leaves_unparseable_values_as_none(
     service: AppointmentDetailsService,
 ) -> None:
+    """Checks that unsupported date and time values remain empty."""
     result = service.extract("Date: sometime next week\nTime: morning\nLocation: Example Hospital")
 
     assert result.details.date is None
@@ -514,6 +547,7 @@ def test_extract_leaves_unparseable_values_as_none(
 def test_extract_warns_when_no_supported_fields_are_found(
     service: AppointmentDetailsService,
 ) -> None:
+    """Checks that a review warning is returned when no supported appointment details are found."""
     result = service.extract("Please bring your medication list with you.")
 
     assert result.details.date is None
@@ -530,6 +564,7 @@ def test_extract_warns_when_no_supported_fields_are_found(
 def test_extract_warns_when_core_fields_are_missing(
     service: AppointmentDetailsService,
 ) -> None:
+    """Checks that missing core appointment details are included in the review warning."""
     result = service.extract("Service: Neurology\nWith: Dr Smith")
 
     assert result.processing_warning == (
@@ -542,6 +577,7 @@ def test_extract_warns_when_core_fields_are_missing(
 def test_extract_regression_for_metadata_and_appointment_detail_blocks(
     service: AppointmentDetailsService,
 ) -> None:
+    """Checks extraction from a letter containing both document metadata and appointment details."""
     text = """Patient correspondence
 Example University Hospital
 Outpatient appointment
@@ -581,6 +617,7 @@ Country United Kingdom"""
 def test_extract_regression_for_wrapped_narrative_letter(
     service: AppointmentDetailsService,
 ) -> None:
+    """Checks extraction from appointment wording wrapped across several lines."""
     text = """Example University Hospital
 Appointment information
 Patient: Example Patient

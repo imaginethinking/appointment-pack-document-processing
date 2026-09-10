@@ -1,3 +1,5 @@
+"""Tests for approved consultation summarisation."""
+
 from types import SimpleNamespace
 from unittest.mock import Mock
 
@@ -50,6 +52,7 @@ def build_completion(
 def test_constructor_configures_openai_without_automatic_retries(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    """Checks that the OpenAI client is created with automatic retries disabled."""
     constructor = Mock(return_value=Mock())
 
     monkeypatch.setattr(
@@ -76,6 +79,7 @@ def test_constructor_configures_openai_without_automatic_retries(
 
 
 def test_summarise_rejects_missing_openai_configuration() -> None:
+    """Checks that summarisation fails clearly when OpenAI is not configured."""
     service = OpenAiSummaryService(
         api_key=None,
         model_name="gpt-5-nano",
@@ -92,6 +96,7 @@ def test_summarise_rejects_missing_openai_configuration() -> None:
 
 
 def test_summarise_returns_structured_summary_and_metadata() -> None:
+    """Checks that a successful response returns the summary and model metadata."""
     service = build_service()
 
     service.client.chat.completions.parse.return_value = build_completion(
@@ -106,6 +111,7 @@ def test_summarise_returns_structured_summary_and_metadata() -> None:
 
 
 def test_summarise_uses_current_prompt_and_completion_configuration() -> None:
+    """Checks that summarisation uses the configured prompt model and output settings."""
     service = build_service()
     approved_text = "The patient reported improved symptoms."
 
@@ -142,6 +148,7 @@ def test_summarise_uses_current_prompt_and_completion_configuration() -> None:
 
 
 def test_summarise_rejects_completion_without_choice() -> None:
+    """Checks that a completion without a summary choice is rejected."""
     service = build_service()
 
     service.client.chat.completions.parse.return_value = SimpleNamespace(
@@ -157,6 +164,7 @@ def test_summarise_rejects_completion_without_choice() -> None:
 
 
 def test_summarise_rejects_completion_without_parsed_response() -> None:
+    """Checks that a completion without a parsed summary is rejected."""
     service = build_service()
 
     service.client.chat.completions.parse.return_value = build_completion(
@@ -171,6 +179,7 @@ def test_summarise_rejects_completion_without_parsed_response() -> None:
 
 
 def test_summary_payload_rejects_whitespace_only_summary() -> None:
+    """Checks that a structured summary containing only spaces is rejected."""
     with pytest.raises(ValidationError):
         OpenAiSummaryPayload(summary="   ")
 
@@ -178,6 +187,7 @@ def test_summary_payload_rejects_whitespace_only_summary() -> None:
 def test_summarise_translates_timeout(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    """Checks that an OpenAI timeout is translated into the summary timeout error."""
     class SyntheticTimeoutError(Exception):
         """Synthetic provider timeout used without a live SDK request."""
 
@@ -200,6 +210,7 @@ def test_summarise_translates_timeout(
 def test_summarise_translates_connection_failure(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    """Checks that an OpenAI connection failure is translated into the unavailable error."""
     class SyntheticConnectionError(Exception):
         """Synthetic provider connection failure."""
 
@@ -222,6 +233,7 @@ def test_summarise_translates_connection_failure(
 def test_summarise_translates_completion_length_failure(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    """Checks that a completion stopped by the token limit is treated as an invalid response."""
     class SyntheticLengthError(Exception):
         """Synthetic completion-length failure."""
 
@@ -242,6 +254,7 @@ def test_summarise_translates_completion_length_failure(
 
 
 def test_summarise_translates_structured_response_validation_failure() -> None:
+    """Checks that invalid structured response data is translated into the expected summary error."""
     service = build_service()
 
     with pytest.raises(ValidationError) as validation_error:
@@ -259,6 +272,7 @@ def test_summarise_translates_structured_response_validation_failure() -> None:
 def test_summarise_translates_other_openai_failure(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    """Checks that other OpenAI failures are translated into the unavailable error."""
     class SyntheticOpenAiError(Exception):
         """Synthetic generic OpenAI SDK failure."""
 

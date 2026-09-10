@@ -1,3 +1,5 @@
+"""Tests for document processing and summarisation behaviour."""
+
 from datetime import date, time
 from unittest.mock import Mock
 from uuid import uuid4
@@ -67,6 +69,7 @@ def build_service(
 
 
 def test_extract_rejects_empty_document_before_text_extraction() -> None:
+    """Checks that an empty document is rejected before text extraction begins."""
     service, text_extraction_service, _, _, _ = build_service()
 
     with pytest.raises(
@@ -85,6 +88,7 @@ def test_extract_rejects_empty_document_before_text_extraction() -> None:
 
 
 def test_extract_rejects_document_above_size_limit() -> None:
+    """Checks that documents above the configured size limit are rejected."""
     service, text_extraction_service, _, _, _ = build_service(
         maximum_file_size_bytes=4,
     )
@@ -105,6 +109,7 @@ def test_extract_rejects_document_above_size_limit() -> None:
 
 
 def test_extract_rejects_unsupported_media_type() -> None:
+    """Checks that unsupported document media types are rejected."""
     service, text_extraction_service, _, _, _ = build_service()
 
     with pytest.raises(
@@ -123,6 +128,7 @@ def test_extract_rejects_unsupported_media_type() -> None:
 
 
 def test_extract_processes_appointment_letter_without_deidentification() -> None:
+    """Checks that appointment letters use appointment extraction without deidentification."""
     (
         service,
         text_extraction_service,
@@ -190,6 +196,7 @@ def test_extract_processes_appointment_letter_without_deidentification() -> None
 
 
 def test_extract_processes_consultation_without_appointment_extraction() -> None:
+    """Checks that consultation letters use deidentification without appointment extraction."""
     (
         service,
         text_extraction_service,
@@ -237,6 +244,7 @@ def test_extract_processes_consultation_without_appointment_extraction() -> None
 
 
 def test_summarise_rejects_blank_approved_text() -> None:
+    """Checks that blank approved consultation text is rejected."""
     service, _, _, _, openai_summary_service = build_service()
 
     with pytest.raises(
@@ -252,6 +260,7 @@ def test_summarise_rejects_blank_approved_text() -> None:
 
 
 def test_summarise_rejects_approved_text_above_character_limit() -> None:
+    """Checks that approved consultation text above the character limit is rejected."""
     service, _, _, _, openai_summary_service = build_service(
         maximum_ai_input_characters=5,
     )
@@ -269,6 +278,7 @@ def test_summarise_rejects_approved_text_above_character_limit() -> None:
 
 
 def test_summarise_maps_openai_result_to_api_response() -> None:
+    """Checks that a generated summary and its metadata are mapped into the API response."""
     service, _, _, _, openai_summary_service = build_service()
 
     document_id = uuid4()

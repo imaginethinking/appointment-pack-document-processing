@@ -1,3 +1,5 @@
+"""Tests for image preprocessing before OCR."""
+
 from PIL import Image
 
 from appointment_pack_processing.services.image_preprocessing_service import (
@@ -6,6 +8,7 @@ from appointment_pack_processing.services.image_preprocessing_service import (
 
 
 def test_preprocess_returns_rgb_image_when_disabled() -> None:
+    """Checks that disabled preprocessing returns an RGB image without resizing it."""
     service = ImagePreprocessingService(
         enabled=False,
         minimum_image_width=200,
@@ -24,6 +27,7 @@ def test_preprocess_returns_rgb_image_when_disabled() -> None:
 
 
 def test_preprocess_enlarges_small_image_when_enabled() -> None:
+    """Checks that small images are enlarged when preprocessing is enabled."""
     service = ImagePreprocessingService(
         enabled=True,
         minimum_image_width=200,
@@ -42,6 +46,7 @@ def test_preprocess_enlarges_small_image_when_enabled() -> None:
 
 
 def test_preprocess_keeps_large_image_dimensions_when_enabled() -> None:
+    """Checks that images already above the minimum width keep their dimensions."""
     service = ImagePreprocessingService(
         enabled=True,
         minimum_image_width=200,
